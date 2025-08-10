@@ -17,7 +17,6 @@
   }
   #app{min-height:100dvh; display:grid; place-items:center; padding:12px;}
 
-  /* World container with fixed aspect for consistency across devices */
   .world{
     position:relative;
     width:min(96vw,1100px);
@@ -40,9 +39,12 @@
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
   .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#fff; font-weight:600;}
   .btn{cursor:pointer; padding:6px 12px; border-radius:10px; border:none; font-weight:700; background:#fff;}
+
+  /* Meters */
   .meters{display:flex; gap:8px; flex-wrap:wrap;}
   .meter{width:130px; max-width:28vw; height:10px; background:#ececec; border-radius:20px; overflow:hidden;}
-  .fill{height:100%; background:#5bd65b;} .warn{background:#ffd166;} .crit{background:#ef476f;}
+  .fill{display:block; height:100%; background:#5bd65b; transition:width .25s linear;}
+  .warn{background:#ffd166;} .crit{background:#ef476f;}
 
   /* 2×2 grid for zones */
   .grid{
@@ -58,7 +60,7 @@
   .barn .door{position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:28%; height:60%; background:#4b8a16; border:6px solid #2f2614; border-bottom:none; border-radius:10px 10px 0 0;}
   .barn .stoop{position:absolute; left:14%; right:14%; bottom:-8%; height:14%; background:var(--dirt); border-radius:20px;}
 
-  /* Unicorn (centered by translate so x/y in %) */
+  /* Unicorn */
   .unicorn{position:absolute; width:min(12vmin, 120px); height:min(12vmin, 120px); translate:-50% -50%; user-select:none; touch-action:none;}
   .u-emoji{font-size:64px; line-height:1; position:absolute; left:50%; top:50%; translate:-50% -50%;}
   .speech{position:absolute; left:0; top:-12px; translate:-10% -100%; background:#fff; padding:6px 10px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,.2); font-weight:700;}
@@ -79,7 +81,7 @@
   <script type="text/babel">
     const {useState,useRef,useEffect} = React;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-    const STORAGE_KEY='unicorn_ranch_react_v6';
+    const STORAGE_KEY='unicorn_ranch_react_v7';
 
     // Different drain rates (per second)
     const DRAIN = { hunger: 1.2, thirst: 1.6, energy: 0.9, fun: 1.4 };
@@ -107,12 +109,11 @@
       useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),1000); return ()=>clearInterval(id); },[]);
       const isNight = ((now%dayMs)/dayMs)>0.7 || ((now%dayMs)/dayMs)<0.2;
 
-      // Single reliable game loop — 10 times per second
+      // Single loop — 10 times/sec; drains always, recharges only in matching zone
       useEffect(()=>{
         const dt = 0.1; // seconds per tick
         const id = setInterval(()=>{
           setS(prev=>{
-            // Determine current zone based on previous position
             const current = hitZoneAtPercent(prev.x, prev.y);
             const needs = {...prev.needs};
 
@@ -122,13 +123,13 @@
             needs.energy = clamp(needs.energy - DRAIN.energy*dt, 0, 100);
             needs.fun    = clamp(needs.fun    - DRAIN.fun*dt,    0, 100);
 
-            // recharge only the matching need while inside a zone
+            // recharge only the matching one
             if(current==='lake')  needs.thirst = clamp(needs.thirst + RECHARGE.lake.thirst*dt, 0, 100);
             if(current==='field') needs.hunger = clamp(needs.hunger + RECHARGE.field.hunger*dt, 0, 100);
             if(current==='barn')  needs.energy = clamp(needs.energy + RECHARGE.barn.energy*dt, 0, 100);
             if(current==='play')  needs.fun    = clamp(needs.fun    + RECHARGE.play.fun*dt,    0, 100);
 
-            // random friendly prompt
+            // tiny prompt sometimes
             if(Math.random()<0.04){
               const lows=Object.entries(needs).filter(([,v])=>v<55);
               if(lows.length){
@@ -138,10 +139,10 @@
               }
             }
 
-            // age & stage in the same state update (avoid batching confusion)
+            // age & stage
             let age = prev.age;
             const avg=(needs.hunger+needs.thirst+needs.energy+needs.fun)/4;
-            if(avg>70) age += dt; // age accumulates slowly
+            if(avg>70) age += dt;
             let stage='Baby';
             if(age>90) stage='Adult'; else if(age>60) stage='Teen'; else if(age>30) stage='Kid';
 
