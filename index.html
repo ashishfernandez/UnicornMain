@@ -9,12 +9,10 @@
   :root{
     --sky1:#9fd3ff; --sky2:#cfe8ff; --grass:#b8e986; --water:#9fd3ff;
     --barn1:#f77; --barn2:#d26; --dirt:#e2c39a;
-
-    /* UI scale multiplier (bigger on phones) */
-    --uiScale: 1;
+    --uiScale: 1; /* desktop/tablet base */
   }
 
-  /* Larger UI on small screens */
+  /* Phones: make everything MUCH larger */
   @media (max-width: 640px){
     :root{ --uiScale: 3; }
   }
@@ -24,7 +22,7 @@
   body{ font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
   #app{ min-height:100dvh; display:flex; justify-content:center; padding:8px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
 
-  /* World fills the screen; UI on top, grid below */
+  /* World = column: UI on top, 2×2 grid fills remaining space */
   .world{
     display:flex; flex-direction:column;
     width:100%; max-width:1100px;
@@ -39,62 +37,93 @@
   .ui{
     padding:calc(8px * var(--uiScale));
     background:rgba(255,255,255,.92);
-    display:flex; flex-direction:column; gap:calc(8px * var(--uiScale));
+    display:flex; flex-direction:column; gap:calc(10px * var(--uiScale));
     z-index:2;
   }
-  .row{ display:flex; flex-wrap:wrap; gap:calc(8px * var(--uiScale)); align-items:center; }
-  .pill{ display:inline-flex; align-items:center; gap:calc(6px * var(--uiScale)); padding:calc(4px * var(--uiScale)) calc(8px * var(--uiScale)); border-radius:999px; background:#fff; font-weight:700; font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); }
-  .btn{ cursor:pointer; padding:calc(6px * var(--uiScale)) calc(10px * var(--uiScale)); border-radius:12px; border:none; font-weight:700; background:#fff; font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); }
+  .row{ display:flex; flex-wrap:wrap; gap:calc(10px * var(--uiScale)); align-items:center; }
+  .pill{ display:inline-flex; align-items:center; gap:calc(8px * var(--uiScale));
+         padding:calc(6px * var(--uiScale)) calc(12px * var(--uiScale));
+         border-radius:999px; background:#fff; font-weight:700;
+         font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); }
+  .btn{ cursor:pointer; padding:calc(8px * var(--uiScale)) calc(14px * var(--uiScale));
+        border-radius:12px; border:none; font-weight:700;
+        font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); }
   .btn:active{ transform:translateY(1px); }
   .btn-green{ background:#4caf50; color:#fff; }
   .btn-green:hover{ background:#45a049; }
   .btn-blue{ background:#2196f3; color:#fff; }
   .btn-blue:hover{ background:#1976d2; }
+  .btn-grey{ background:#888; color:#fff; }
+  .btn-grey:hover{ background:#777; }
 
-  /* Meters: grey track, black fill (red under 50%) */
-  .meters{ display:flex; gap:calc(8px * var(--uiScale)); flex-wrap:wrap; }
-  .meter{ width:clamp(140px, calc(24vw * var(--uiScale)), 260px); height:clamp(12px, calc(2vh * var(--uiScale)), 18px); background:#d3d3d3; border-radius:20px; overflow:hidden; }
+  /* Bars: light grey track, black fill (red under 50%) */
+  .meters{ display:flex; gap:calc(10px * var(--uiScale)); flex-wrap:wrap; }
+  .meter{ width:clamp(160px, calc(28vw * var(--uiScale)), 320px);
+          height:clamp(12px, calc(2.2vh * var(--uiScale)), 20px);
+          background:#d3d3d3; border-radius:20px; overflow:hidden; }
   .fill{ display:block; height:100%; transition:width .15s linear, background-color .15s linear; }
 
-  /* Grid (2×2) */
+  /* On phones: make bars take ~one third of screen vertically */
+  @media (max-width: 640px){
+    .meters{ flex-direction:column; align-items:stretch; min-height:33vh; }
+    .meter{ width:100%; height:6.5vh; min-height:44px; }
+  }
+
+  /* Grid (2×2) fills the rest */
   .grid{
     flex:1; display:grid;
     grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
-    gap:clamp(8px, calc(2vmin * var(--uiScale)), 22px);
+    gap:clamp(8px, calc(2vmin * var(--uiScale)), 24px);
     padding:calc(8px * var(--uiScale));
   }
   .zone{ position:relative; border-radius:20px; outline:4px solid rgba(255,255,255,.6); overflow:hidden; }
-  .label{ position:absolute; top:8px; left:8px; padding:calc(4px * var(--uiScale)) calc(8px * var(--uiScale)); background:rgba(255,255,255,.9); border-radius:12px; font-weight:700; font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); z-index:2; }
+  .label{ position:absolute; top:8px; left:8px;
+          padding:calc(6px * var(--uiScale)) calc(10px * var(--uiScale));
+          background:rgba(255,255,255,.9); border-radius:12px; font-weight:700;
+          font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); z-index:2; }
   .lake{ background:radial-gradient(circle at 40% 30%, #e7f6ff, var(--water)); }
   .field{ background:repeating-linear-gradient(45deg, rgba(255,255,255,.35), rgba(255,255,255,.35) 10px, transparent 10px, transparent 20px); }
   .play{ background:linear-gradient(135deg, #fef3bd, #ffd6a5); }
   .barn{ background:linear-gradient(var(--barn1), var(--barn2)); }
-  .barn .door{ position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:28%; height:60%; background:#4b8a16; border:6px solid #2f2614; border-bottom:none; border-radius:10px 10px 0 0; }
-  .barn .stoop{ position:absolute; left:14%; right:14%; bottom:-8%; height:14%; background:var(--dirt); border-radius:20px; }
+  .barn .door{ position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+               width:28%; height:60%; background:#4b8a16; border:6px solid #2f2614;
+               border-bottom:none; border-radius:10px 10px 0 0; }
+  .barn .stoop{ position:absolute; left:14%; right:14%; bottom:-8%; height:14%;
+                background:var(--dirt); border-radius:20px; }
 
   /* Unicorn (absolute in world) */
   .unicorn{
-    position:absolute; width:clamp(72px, calc(12vmin * var(--uiScale)), 140px); aspect-ratio:1/1;
-    user-select:none; touch-action:none; z-index:3;
+    position:absolute; aspect-ratio:1/1; user-select:none; touch-action:none; z-index:3;
     transform:translate(-50%,-50%);
+    width:clamp(72px, calc(12vmin * var(--uiScale)), 160px);
   }
-  .u-emoji{ font-size:clamp(48px, calc(8vmin * var(--uiScale)), 72px); line-height:1; }
+  .u-emoji{ font-size:clamp(48px, calc(8vmin * var(--uiScale)), 80px); line-height:1; }
 
-  /* Monster: we animate with CSS transitions to the unicorn's position */
+  /* Phones: lock to "thumbnail" size so it doesn't overgrow */
+  @media (max-width: 640px){
+    .unicorn{ width:96px; }
+    .u-emoji{ font-size:90px; }
+  }
+
+  /* Monster chases with CSS transitions to the unicorn's position */
   .monster{
-    position:absolute; z-index:4; line-height:1;
-    font-size:clamp(72px, calc(14vmin * var(--uiScale)), 140px);
+    position:absolute; z-index:4; line-height:1; pointer-events:none;
     transform:translate(-50%,-50%) scale(1);
     transition: left 2s linear, top 2s linear, transform .25s ease;
     filter:hue-rotate(90deg) saturate(0.6) brightness(0.85); /* grey-green tint */
-    pointer-events:none;
+    font-size:clamp(72px, calc(14vmin * var(--uiScale)), 160px);
   }
   .monster.chomp{ transform:translate(-50%,-50%) scale(1.2) rotate(5deg); }
 
+  /* Phones: monster = large thumbnail */
+  @media (max-width: 640px){
+    .monster{ font-size:110px; }
+  }
+
   /* Modal */
   .modal{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:5; }
-  .panel{ background:#fff; padding:clamp(16px, calc(3vmin * var(--uiScale)), 24px); border-radius:16px; width:min(92%,520px); text-align:center; }
-  .panel h2{ margin:0 0 10px; font-size:calc(clamp(18px, 3.2vmin, 22px) * var(--uiScale)); }
+  .panel{ background:#fff; padding:calc(18px * var(--uiScale)); border-radius:16px; width:min(92%,520px); text-align:center; }
+  .panel h2{ margin:0 0 12px; font-size:calc(clamp(18px, 3.2vmin, 22px) * var(--uiScale)); }
   .panel p{ margin:0 0 16px; font-size:calc(clamp(14px, 2.6vmin, 18px) * var(--uiScale)); }
 </style>
 </head>
@@ -155,16 +184,10 @@ function App(){
         if(current==='barn')  needs.energy = clamp(needs.energy + BASE_RECHARGE.barn.energy *rechargeMult*dt, 0, 100);
         if(current==='play')  needs.fun    = clamp(needs.fun    + BASE_RECHARGE.play.fun    *rechargeMult*dt, 0, 100);
 
-        // trigger monster sequence exactly once
+        // trigger monster sequence once
         if(Object.values(needs).some(v=>v<=0) && !prev.eaten){
-          // launch monster toward the unicorn's current % position
-          const startY = prev.y; // enter at unicorn's Y to feel targeted
-          return {
-            ...prev,
-            needs,
-            eaten:true,
-            monster:{ x:-20, y:startY, chomp:false } // start off-screen left
-          };
+          const startY = prev.y; // monster enters at unicorn's Y
+          return {...prev, needs, eaten:true, monster:{ x:-20, y:startY, chomp:false }};
         }
 
         // countdown
@@ -178,24 +201,21 @@ function App(){
     return ()=>clearInterval(id);
   },[s.status, s.level, s.eaten]);
 
-  /* Monster chase + collision timing */
+  /* Monster chase + collision sequence */
   useEffect(()=>{
     if(!s.eaten) return;
 
-    // Step 1: after a tiny delay, move monster to the unicorn's last known position (2s)
+    // Move monster to unicorn's current % position (2s)
     const chaseTimer = setTimeout(()=>{
-      setS(prev=>{
-        // aim where unicorn currently is (or last known)
-        return {...prev, monster:{ ...prev.monster, x: prev.x, y: prev.y }};
-      });
-    }, 100); // allow initial render at off-screen pos
+      setS(prev=>({...prev, monster:{ ...prev.monster, x: prev.x, y: prev.y }}));
+    }, 100);
 
-    // Step 2: on impact (~2s), do a quick "chomp" (scale) and hide unicorn
+    // Chomp near arrival (~2.1s), quick scale/tilt
     const chompTimer = setTimeout(()=>{
       setS(prev=>({...prev, monster:{...prev.monster, chomp:true}}));
     }, 2100);
 
-    // Step 3: after total 4s, show game over modal
+    // After 4s total, show game over modal
     const overTimer = setTimeout(()=>{
       setS(prev=>({...prev, status:'gameover'}));
     }, 4000);
@@ -262,15 +282,16 @@ function App(){
           {currentZone && <span className="pill">
             Here: {currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'}
           </span>}
-          <button className="btn" onClick={restartGame}>Restart Game</button>
+          <button className="btn btn-grey" onClick={restartGame}>Restart Game</button>
         </div>
+
         <div className="row meters">
           {Object.entries({hunger:"🍎",thirst:"💧",energy:"💤",fun:"🎈"}).map(([k,em])=>{
             const v=s.needs[k];
             const color = v<50 ? 'red' : 'black';
             return (
               <span className="pill" key={k}>
-                {em}
+                <span aria-hidden="true" style={{fontSize:"1.25em"}}>{em}</span>
                 <span className="meter">
                   <span className="fill" style={{width:`${v}%`, backgroundColor: color}}></span>
                 </span>
@@ -288,7 +309,7 @@ function App(){
         <div className="zone play"><div className="label">Play 🎈</div></div>
       </div>
 
-      {/* Unicorn (hidden once the monster chomps) */}
+      {/* Unicorn (hidden once monster sequence triggers) */}
       {!s.eaten && (
         <div className="unicorn" style={{left:`${s.x}%`, top:`${s.y}%`}}
              onMouseDown={onStart} onTouchStart={onStart}>
@@ -296,7 +317,7 @@ function App(){
         </div>
       )}
 
-      {/* Monster that actually targets the unicorn */}
+      {/* Monster goes to the unicorn and chomps */}
       {s.eaten && (
         <div className={`monster ${s.monster.chomp ? 'chomp' : ''}`}
              style={{ left:`${s.monster.x}%`, top:`${s.monster.y}%` }}>
