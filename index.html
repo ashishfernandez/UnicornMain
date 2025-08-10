@@ -1,325 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Unicorn Ranch (React)</title>
-    <meta name="description" content="Raise a baby unicorn – feed, drink, play, and nap!" />
-    <style>
-      :root{
-        --bgTop:#9fd3ff; --bgMid:#cfe8ff; --grass:#b8e986; --water:#9fd3ff;
-        --barn1:#f77; --barn2:#d26; --dirt:#e2c39a;
-      }
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Unicorn Ranch (React)</title>
+<meta name="description" content="Raise a baby unicorn – feed, drink, play, and nap!" />
+<style>
+  :root{
+    --sky1:#9fd3ff; --sky2:#cfe8ff; --grass:#b8e986; --water:#9fd3ff;
+    --barn1:#f77; --barn2:#d26; --dirt:#e2c39a;
+  }
+  html,body{
+    margin:0; height:100%;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(var(--sky1),var(--sky2) 30%,var(--grass) 30%);
+  }
+  #app{min-height:100dvh; display:grid; place-items:center; padding:12px;}
 
-      /* Page background */
-      html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-        background:linear-gradient(var(--bgTop),var(--bgMid) 30%,var(--grass) 30%);}
-      #app{min-height:100dvh; display:grid; place-items:center; padding:12px;}
+  /* World container with fixed aspect for consistency across devices */
+  .world{
+    position:relative;
+    width:min(96vw,1100px);
+    aspect-ratio:16/10;
+    border-radius:24px; overflow:hidden;
+    box-shadow:0 10px 40px rgba(0,0,0,.15);
+    background:linear-gradient(var(--sky1),var(--sky2) 35%, var(--grass) 35%);
+  }
+  .night{ filter:brightness(.85) saturate(.9); }
 
-      /* World is responsive: always fits screen, capped for big monitors */
-      .world{
-        position:relative;
-        width:min(96vw, 1100px);
-        aspect-ratio: 16 / 10;       /* keeps proportions on any screen */
-        border-radius:24px;
-        overflow:hidden;
-        box-shadow:0 10px 40px rgba(0,0,0,.15);
-        background:linear-gradient(var(--bgTop), var(--bgMid) 35%, var(--grass) 35%);
-      }
-      .night{ filter:brightness(.85) saturate(.9); }
+  /* Top UI */
+  .ui{ position:absolute; inset:12px 12px auto 12px; display:flex; flex-wrap:wrap; gap:10px; }
+  .card{
+    background:rgba(255,255,255,.92);
+    padding:10px 12px; border-radius:14px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+    display:flex; flex-direction:column; gap:8px;
+    max-width:calc(100% - 24px);
+  }
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#fff; font-weight:600;}
+  .btn{cursor:pointer; padding:6px 12px; border-radius:10px; border:none; font-weight:700; background:#fff;}
+  .meters{display:flex; gap:8px; flex-wrap:wrap;}
+  .meter{width:130px; max-width:28vw; height:10px; background:#ececec; border-radius:20px; overflow:hidden;}
+  .fill{height:100%; background:#5bd65b;} .warn{background:#ffd166;} .crit{background:#ef476f;}
 
-      /* Top UI bar */
-      .ui{
-        position:absolute; inset:12px 12px auto 12px;
-        display:flex; flex-wrap:wrap; gap:10px;
-      }
-      .card{
-        background:rgba(255,255,255,.92);
-        padding:10px 12px; border-radius:14px;
-        box-shadow:0 2px 8px rgba(0,0,0,.1);
-        display:flex; flex-direction:column; gap:8px; max-width:calc(100% - 24px);
-      }
-      .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
-      .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#fff; font-weight:600;}
-      .btn{cursor:pointer; padding:6px 12px; border-radius:10px; border:none; font-weight:700; background:#fff;}
+  /* 2×2 grid for zones */
+  .grid{
+    position:absolute; left:2%; right:2%; top:28%; bottom:4%;
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2.5%;
+  }
+  .zone{position:relative; border-radius:20px; outline:4px solid rgba(255,255,255,.6); overflow:hidden;}
+  .label{position:absolute; top:8px; left:8px; padding:4px 10px; background:rgba(255,255,255,.9); border-radius:12px; font-weight:700; font-size:14px; z-index:2;}
+  .lake{background:radial-gradient(circle at 40% 30%, #e7f6ff, var(--water));}
+  .field{background:repeating-linear-gradient(45deg, rgba(255,255,255,.35), rgba(255,255,255,.35) 10px, transparent 10px, transparent 20px);}
+  .play{background:linear-gradient(135deg, #fef3bd, #ffd6a5);}
+  .barn{background:linear-gradient(var(--barn1), var(--barn2));}
+  .barn .door{position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:28%; height:60%; background:#4b8a16; border:6px solid #2f2614; border-bottom:none; border-radius:10px 10px 0 0;}
+  .barn .stoop{position:absolute; left:14%; right:14%; bottom:-8%; height:14%; background:var(--dirt); border-radius:20px;}
 
-      /* Need meters */
-      .meters{display:flex; gap:8px; flex-wrap:wrap;}
-      .meter{width:130px; max-width:28vw; height:10px; background:#ececec; border-radius:20px; overflow:hidden;}
-      .fill{height:100%; background:#5bd65b;}
-      .warn{background:#ffd166;} .crit{background:#ef476f;}
+  /* Unicorn (centered by translate so x/y in %) */
+  .unicorn{position:absolute; width:min(12vmin, 120px); height:min(12vmin, 120px); translate:-50% -50%; user-select:none; touch-action:none;}
+  .u-emoji{font-size:64px; line-height:1; position:absolute; left:50%; top:50%; translate:-50% -50%;}
+  .speech{position:absolute; left:0; top:-12px; translate:-10% -100%; background:#fff; padding:6px 10px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,.2); font-weight:700;}
 
-      /* Zones use % so they scale with world size */
-      .zone{position:absolute; border-radius:20px; outline:4px solid rgba(255,255,255,.6);}
-      .label{position:absolute; top:-28px; left:12px; padding:4px 10px; background:rgba(255,255,255,.9); border-radius:12px; font-weight:700; font-size:14px;}
+  /* Pause modal */
+  .modal{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5);}
+  .panel{background:#fff; padding:18px; border-radius:16px; width:min(92%,520px);}
+</style>
+</head>
+<body>
+  <div id="app"></div>
 
-      /* Layout based on a 1024x640 design, converted to percentages */
-      .lake{left:2%; top:41%; width:25.4%; height:31.25%;
-        background:radial-gradient(circle at 40% 30%, #e7f6ff, var(--water));}
-      .field{left:29.3%; top:59.4%; width:37.1%; height:25%;
-        background:repeating-linear-gradient(45deg, rgba(255,255,255,.35), rgba(255,255,255,.35) 10px, transparent 10px, transparent 20px);}
-      .play{left:72.6%; top:43.75%; width:25.4%; height:28.1%;
-        background:linear-gradient(135deg, #fef3bd, #ffd6a5);}
-      .barn{left:66.4%; top:18.75%; width:29.3%; height:31.25%;
-        background:linear-gradient(var(--barn1), var(--barn2));}
-      .barn-door{position:absolute; left:36%; bottom:0; width:28%; height:60%;
-        background:#4b8a16; border:6px solid #2f2614; border-bottom:none; border-radius:10px 10px 0 0;}
-      .barn:after{content:""; position:absolute; left:10%; bottom:-6%; width:72%; height:12%; background:var(--dirt); border-radius:20px;}
+  <!-- React 18 UMD + JSX via Babel (no build step) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-      /* Stars at night */
-      .stars{position:absolute; inset:0; pointer-events:none;}
-      .star{position:absolute; width:4px; height:4px; background:#fff; border-radius:50%; opacity:.9;}
+  <script type="text/babel">
+    const {useState,useRef,useEffect,useMemo} = React;
+    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+    const STORAGE_KEY='unicorn_ranch_react_v4'; // new key
 
-      /* Unicorn */
-      .unicorn{
-        position:absolute;
-        width:min(12vmin, 120px); height:min(12vmin, 120px);
-        user-select:none; touch-action:none;
-        translate:-50% -50%;   /* so we can position by center (x%, y%) */
-      }
-      .u-emoji{font-size:64px; line-height:1; position:absolute; left:50%; top:50%; translate:-50% -50%;}
-      .speech{position:absolute; top:-30%; left:0; translate:-20% -100%;
-        background:#fff; padding:6px 10px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,.2); font-weight:700;}
+    function useLocalStorageState(key, initial){
+      const [state,setState]=useState(()=>{ try{ const raw=localStorage.getItem(key); return raw? JSON.parse(raw): initial;}catch{ return initial; }});
+      useEffect(()=>{ try{ localStorage.setItem(key, JSON.stringify(state)); }catch{} },[state]);
+      return [state,setState];
+    }
 
-      /* Modal */
-      .modal{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5);}
-      .panel{background:#fff; padding:18px; border-radius:16px; width:min(92%,520px);}
-    </style>
-  </head>
-  <body>
-    <div id="app"></div>
+    function App(){
+      // x,y as % of world (responsive)
+      const initial={ x:15, y:25, needs:{hunger:80,thirst:80,energy:80,fun:70}, age:0, stage:'Baby', wins:{fed:0,drank:0,napped:0,played:0}, calm:false };
+      const [s,setS]=useLocalStorageState(STORAGE_KEY, initial);
+      const [dragging,setDragging]=useState(false);
+      const [now,setNow]=useState(Date.now());
+      const [msg,setMsg]=useState('');
+      const [showPause,setShowPause]=useState(false);
+      const worldRef=useRef(null);
 
-    <!-- React 18 UMD + JSX runtime via Babel (no build step) -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+      // day-night cycle (6 minutes)
+      const dayMs=6*60*1000;
+      useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),1000); return ()=>clearInterval(id); },[]);
+      const phase=((now%dayMs)/dayMs); const isNight = phase>0.7 || phase<0.2;
 
-    <script type="text/babel">
-      const {useState,useRef,useEffect,useMemo} = React;
-      const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-      const rnd=(a,b)=>Math.random()*(b-a)+a;
-      const STORAGE_KEY='unicorn_ranch_react_v2'; // new key so old layout doesn't conflict
-
-      function useLocalStorageState(key, initial){
-        const [state,setState]=React.useState(()=>{
-          try{ const raw=localStorage.getItem(key); return raw? JSON.parse(raw): initial;}catch{ return initial; }
+      // needs decay + aging
+      useEffect(()=>{
+        if(s.calm) return;
+        setS(prev=>{
+          const dec=isNight? {hunger:0.7,thirst:0.7,energy:-0.5,fun:0.4} : {hunger:1,thirst:1,energy:0.6,fun:1};
+          const needs={...prev.needs};
+          needs.hunger = clamp(needs.hunger - dec.hunger, 0, 100);
+          needs.thirst = clamp(needs.thirst - dec.thirst, 0, 100);
+          needs.energy = clamp(needs.energy - dec.energy, 0, 100);
+          needs.fun    = clamp(needs.fun    - dec.fun,    0, 100);
+          return {...prev, needs};
         });
-        React.useEffect(()=>{ try{ localStorage.setItem(key, JSON.stringify(state)); }catch{} },[state]);
-        return [state,setState];
+        // gentle prompts
+        if(Math.random()<0.15){
+          const lows=Object.entries(s.needs).filter(([,v])=>v<55);
+          if(lows.length){
+            const k=lows[Math.floor(Math.random()*lows.length)][0];
+            setMsg(k==='hunger'?'Hungry!':k==='thirst'?'Thirsty!':k==='energy'?'Sleepy…':'Play time!');
+            setTimeout(()=>setMsg(''),2000);
+          }
+        }
+        // aging
+        const avg=(s.needs.hunger+s.needs.thirst+s.needs.energy+s.needs.fun)/4;
+        if(avg>70) setS(p=>({...p, age:p.age+1}));
+        setS(p=>{ let stage='Baby'; if(p.age>90) stage='Adult'; else if(p.age>60) stage='Teen'; else if(p.age>30) stage='Kid'; return p.stage===stage? p : {...p, stage}; });
+      },[now]);
+
+      // pointer to % helpers
+      function posToPercent(e){
+        const r=worldRef.current.getBoundingClientRect();
+        const cx=(e.clientX??e.touches?.[0]?.clientX)-r.left;
+        const cy=(e.clientY??e.touches?.[0]?.clientY)-r.top;
+        return {x:clamp((cx/r.width)*100,0,100), y:clamp((cy/r.height)*100,0,100)};
+      }
+      function onStart(e){ setDragging(true); const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
+      function onMove(e){ if(!dragging) return; const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
+      function onEnd(){ setDragging(false); checkZone(); }
+
+      function bumpNeed(name,amount){
+        setS(prev=>{
+          const needs={...prev.needs}; needs[name]=clamp(needs[name]+amount,0,100);
+          const wins={...prev.wins};
+          if(name==='hunger') wins.fed++;
+          if(name==='thirst') wins.drank++;
+          if(name==='energy') wins.napped++;
+          if(name==='fun')    wins.played++;
+          return {...prev, needs, wins};
+        });
       }
 
-      function App(){
-        // x,y are in PERCENT (0..100) of world size so layout is responsive
-        const initial = {
-          x: 15, y: 22, // starting position (percent)
-          needs:{hunger:80, thirst:80, energy:80, fun:70},
-          age:0, stage:'Baby', wins:{fed:0, drank:0, napped:0, played:0},
-          calm:false
-        };
-        const [s, setS] = useLocalStorageState(STORAGE_KEY, initial);
-        const [dragging, setDragging] = useState(false);
-        const [now, setNow] = useState(Date.now());
-        const [msg, setMsg] = useState('');
-        const [showPause, setShowPause]=useState(false);
-        const worldRef=useRef(null);
+      function applyZone(key){
+        if(key==='lake'){ bumpNeed('thirst',22); setMsg('Glug glug!'); }
+        if(key==='field'){ bumpNeed('hunger',22); setMsg('Munch munch!'); }
+        if(key==='barn'){ bumpNeed('energy',24); setMsg('Zzz…'); }
+        if(key==='play'){ bumpNeed('fun',22); setMsg('That was fun!'); }
+        setTimeout(()=>setMsg(''),1600);
+      }
 
-        // Zones (percent-based)
-        const zones=useMemo(()=>({
-          lake:{x:2, y:41, w:25.4, h:31.25, need:'thirst'},
-          field:{x:29.3, y:59.4, w:37.1, h:25, need:'hunger'},
-          play:{x:72.6, y:43.75, w:25.4, h:28.1, need:'fun'},
-          barn:{x:66.4, y:18.75, w:29.3, h:31.25, need:'energy'},
-        }),[]);
-
-        // Day-night cycle (6 minutes)
-        const dayMs = 6*60*1000;
-        const phase = ((now % dayMs)/dayMs);
-        const isNight = phase>0.7 || phase<0.2;
-
-        // clock tick
-        useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),1000); return ()=>clearInterval(id); },[]);
-
-        // needs decay + aging
-        useEffect(()=>{
-          if(s.calm) return;
-          setS(prev=>{
-            const dec = isNight? {hunger:0.7, thirst:0.7, energy:-0.5, fun:0.4}
-                                : {hunger:1, thirst:1, energy:0.6, fun:1};
-            const needs = {...prev.needs};
-            needs.hunger = clamp(needs.hunger - dec.hunger, 0, 100);
-            needs.thirst = clamp(needs.thirst - dec.thirst, 0, 100);
-            needs.energy = clamp(needs.energy - dec.energy, 0, 100);
-            needs.fun    = clamp(needs.fun    - dec.fun,    0, 100);
-            return {...prev, needs};
-          });
-
-          // occasional prompts
-          if(Math.random()<0.15){
-            const low = Object.entries(s.needs).filter(([,v])=>v<55);
-            if(low.length){
-              const k = low[Math.floor(Math.random()*low.length)][0];
-              setMsg(k==='hunger'?'Hungry!':k==='thirst'?'Thirsty!':k==='energy'?'Sleepy…':'Play time!');
-              setTimeout(()=>setMsg(''),2000);
-            }
-          }
-          // gentle aging
-          const avg=(s.needs.hunger+s.needs.thirst+s.needs.energy+s.needs.fun)/4;
-          if(avg>70) setS(p=>({...p, age:p.age+1}));
-          setS(p=>{
-            let stage='Baby'; if(p.age>90) stage='Adult'; else if(p.age>60) stage='Teen'; else if(p.age>30) stage='Kid';
-            return p.stage===stage? p : {...p, stage};
-          });
-        },[now]);
-
-        // drag handlers (convert pointer to % of world)
-        function posToPercent(e){
-          const r=worldRef.current.getBoundingClientRect();
-          const cx=(e.clientX??e.touches?.[0]?.clientX) - r.left;
-          const cy=(e.clientY??e.touches?.[0]?.clientY) - r.top;
-          const x=clamp((cx/r.width)*100, 0, 100);
-          const y=clamp((cy/r.height)*100, 0, 100);
-          return {x,y};
-        }
-        function onStart(e){ setDragging(true); const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
-        function onMove(e){ if(!dragging) return; const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
-        function onEnd(){ setDragging(false); checkZone(); }
-
-        function bumpNeed(name, amount){
-          setS(prev=>{
-            const needs={...prev.needs}; needs[name]=clamp(needs[name]+amount,0,100);
-            const wins={...prev.wins};
-            if(name==='hunger') wins.fed++; if(name==='thirst') wins.drank++; if(name==='energy') wins.napped++; if(name==='fun') wins.played++;
-            return {...prev, needs, wins};
-          });
-        }
-
-        function applyZone(key){
-          if(key==='lake'){ bumpNeed('thirst',22); setMsg('Glug glug!'); }
-          if(key==='field'){ bumpNeed('hunger',22); setMsg('Munch munch!'); }
-          if(key==='barn'){ bumpNeed('energy',24); setMsg('Zzz…'); }
-          if(key==='play'){ openStarDash(); }
-          setTimeout(()=>setMsg(''),1600);
-        }
-
-        function checkZone(){
-          const {x,y}=s;
-          for(const [key,z] of Object.entries(zones)){
-            if(x>z.x && x<z.x+z.w && y>z.y && y<z.y+z.h){ applyZone(key); break; }
+      // Hit-test: check which .zone div the unicorn is over
+      function checkZone(){
+        const {x,y}=s;
+        const rWorld=worldRef.current.getBoundingClientRect();
+        const px=rWorld.left + (x/100)*rWorld.width;
+        const py=rWorld.top  + (y/100)*rWorld.height;
+        const els=[...worldRef.current.querySelectorAll('.grid > .zone')];
+        for(const el of els){
+          const rr=el.getBoundingClientRect();
+          if(px>rr.left && px<rr.right && py>rr.top && py<rr.bottom){
+            if(el.classList.contains('lake')) applyZone('lake');
+            else if(el.classList.contains('field')) applyZone('field');
+            else if(el.classList.contains('play')) applyZone('play');
+            else if(el.classList.contains('barn')) applyZone('barn');
+            break;
           }
         }
+      }
 
-        // Mini game
-        const [game, setGame]=useState(null);
-        function openStarDash(){ setGame({stars:0,timeLeft:30,active:true}); }
-        useEffect(()=>{
-          if(!game?.active) return;
-          const t1=setInterval(()=>setGame(g=>g?{...g,timeLeft:g.timeLeft-1}:g),1000);
-          const t2=setInterval(()=>bumpNeed('fun',6),1500);
-          return ()=>{clearInterval(t1); clearInterval(t2);};
-        },[game?.active]);
-        useEffect(()=>{ if(game && game.timeLeft<=0){ setGame({...game, active:false}); setMsg('Play was fun!'); } },[game?.timeLeft]);
+      function resetSave(){ localStorage.removeItem(STORAGE_KEY); window.location.reload(); }
 
-        const stars=useMemo(()=>Array.from({length:60},()=>({l:rnd(0,100),t:rnd(0,100),o:rnd(.4,1)})),[isNight]);
-
-        function resetSave(){ localStorage.removeItem(STORAGE_KEY); window.location.reload(); }
-
-        return (
-          <div className={"world"+(isNight?" night":"")}
-               ref={worldRef}
-               onMouseMove={onMove} onMouseUp={onEnd}
-               onTouchMove={onMove} onTouchEnd={onEnd}
-          >
-            {/* UI */}
-            <div className="ui">
-              <div className="card">
-                <div className="row">
-                  <strong>Unicorn Ranch</strong>
-                  <span className="pill">Stage: {s.stage}</span>
-                  <span className="pill">Day: {Math.floor((now % dayMs)/(dayMs/24))}</span>
-                  <button className="btn" onClick={()=>setShowPause(true)}>Pause ▶︎▮</button>
-                  <label className="pill">
-                    <input type="checkbox" checked={s.calm} onChange={e=>setS({...s, calm:e.target.checked})}/> Calm Mode
-                  </label>
-                </div>
-                <div className="meters">
-                  {Object.entries({hunger:"🍎",thirst:"💧",energy:"🛌",fun:"🎈"}).map(([k,em])=>{
-                    const v=s.needs[k];
-                    const c=v>65?'fill': v>35?'warn':'crit';
-                    return (
-                      <span className="pill" key={k}>
-                        <span style={{fontSize:18}}>{em}</span>
-                        <span className="meter"><span className={`fill ${c}`} style={{width:`${v}%`}}/></span>
-                      </span>
-                    );
-                  })}
-                </div>
+      return (
+        <div className={"world"+(isNight?" night":"")}
+             ref={worldRef}
+             onMouseMove={onMove} onMouseUp={onEnd}
+             onTouchMove={onMove} onTouchEnd={onEnd}
+        >
+          {/* UI */}
+          <div className="ui">
+            <div className="card">
+              <div className="row">
+                <strong>Unicorn Ranch</strong>
+                <span className="pill">Stage: {s.stage}</span>
+                <span className="pill">Day: {Math.floor((now % dayMs)/(dayMs/24))}</span>
+                <button className="btn" onClick={()=>setShowPause(true)}>Pause ▶︎▮</button>
+                <label className="pill">
+                  <input type="checkbox" checked={s.calm} onChange={e=>setS({...s, calm:e.target.checked})}/> Calm Mode
+                </label>
+              </div>
+              <div className="meters">
+                {Object.entries({hunger:"🍎",thirst:"💧",energy:"🛌",fun:"🎈"}).map(([k,em])=>{
+                  const v=s.needs[k];
+                  const cls=v>65?"fill": v>35?"warn":"crit";
+                  return (
+                    <span className="pill" key={k}>
+                      <span style={{fontSize:18}}>{em}</span>
+                      <span className="meter"><span className={`fill ${cls}`} style={{width:`${v}%`}}/></span>
+                    </span>
+                  );
+                })}
               </div>
             </div>
-
-            {/* Zones */}
-            <div className="zone lake"><span className="label">Lake 💧</span></div>
-            <div className="zone field"><span className="label">Field 🍎</span></div>
-            <div className="zone play"><span className="label">Play 🎈</span></div>
-            <div className="zone barn">
-              <div className="label">Barn 💤</div>
-              <div className="barn-door"></div>
-            </div>
-
-            {/* Stars at night */}
-            {isNight && (
-              <div className="stars">
-                {stars.map((s,i)=> <div key={i} className="star" style={{left:`${s.l}%`,top:`${s.t}%`,opacity:s.o}}/>)}
-              </div>
-            )}
-
-            {/* Unicorn */}
-            <div className="unicorn" style={{left:`${s.x}%`, top:`${s.y}%`}}
-                 onMouseDown={onStart} onTouchStart={onStart}>
-              <div className="u-emoji">🦄</div>
-              {msg && <div className="speech">{msg}</div>}
-            </div>
-
-            {/* Mini-game modal */}
-            {game && (
-              <div className="modal" onClick={()=> game?.active && setGame(g=>({...g,stars:g.stars+1}))}>
-                <div className="panel">
-                  {game.active? (
-                    <>
-                      <h2>Star Dash ✨</h2>
-                      <p>Tap to collect stars! Time left: <strong>{game.timeLeft}s</strong></p>
-                      <div style={{position:'relative', height:220, background:'#222', borderRadius:12, overflow:'hidden'}}/>
-                      <p style={{marginTop:10}}>Stars: <strong>{game.stars}</strong></p>
-                      <div className="row"><button className="btn" onClick={()=>setGame(null)}>Close</button></div>
-                    </>
-                  ):(
-                    <>
-                      <h2>Great play! 🎉</h2>
-                      <p>You collected <strong>{game.stars}</strong> stars. Fun went up!</p>
-                      <div className="row"><button className="btn" onClick={()=>setGame(null)}>OK</button></div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Pause */}
-            {showPause && (
-              <div className="modal">
-                <div className="panel">
-                  <h2>Paused ⏸️</h2>
-                  <p>Today’s Wins: 🍎 {s.wins.fed} • 💧 {s.wins.drank} • 💤 {s.wins.napped} • 🎈 {s.wins.played}</p>
-                  <div className="row">
-                    <button className="btn" onClick={()=>setShowPause(false)}>Resume</button>
-                    <button className="btn" onClick={resetSave}>Reset Game</button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
-        );
-      }
 
-      ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
-    </script>
-  </body>
+          {/* 2×2 zones */}
+          <div className="grid">
+            <div className="zone lake"><div className="label">Lake 💧</div></div>
+            <div className="zone barn"><div className="label">Barn 💤</div><div className="door"></div><div className="stoop"></div></div>
+            <div className="zone field"><div className="label">Field 🍎</div></div>
+            <div className="zone play"><div className="label">Play 🎈</div></div>
+          </div>
+
+          {/* Unicorn */}
+          <div className="unicorn" style={{left:`${s.x}%`, top:`${s.y}%`}}
+               onMouseDown={onStart} onTouchStart={onStart}>
+            <div className="u-emoji">🦄</div>
+            {msg && <div className="speech">{msg}</div>}
+          </div>
+
+          {/* Pause */}
+          {showPause && (
+            <div className="modal">
+              <div className="panel">
+                <h2>Paused ⏸️</h2>
+                <p>Today’s Wins: 🍎 {s.wins.fed} • 💧 {s.wins.drank} • 💤 {s.wins.napped} • 🎈 {s.wins.played}</p>
+                <div className="row">
+                  <button className="btn" onClick={()=>setShowPause(false)}>Resume</button>
+                  <button className="btn" onClick={resetSave}>Reset Game</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+  </script>
+</body>
 </html>
