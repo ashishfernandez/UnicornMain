@@ -77,9 +77,14 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <script type="text/babel">
-    const {useState,useRef,useEffect,useMemo} = React;
+    const {useState,useRef,useEffect} = React;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-    const STORAGE_KEY='unicorn_ranch_react_v4'; // new key
+    const STORAGE_KEY='unicorn_ranch_react_v5'; // new key for this version
+
+    // Per-second drain (harder game: different rates)
+    const DRAIN = { hunger: 1.2, thirst: 1.6, energy: 0.9, fun: 1.4 };
+    // Per-second recharge when inside a matching zone
+    const RECHARGE = { field: {hunger: 7}, lake: {thirst: 7}, barn: {energy: 9}, play: {fun: 7} };
 
     function useLocalStorageState(key, initial){
       const [state,setState]=useState(()=>{ try{ const raw=localStorage.getItem(key); return raw? JSON.parse(raw): initial;}catch{ return initial; }});
@@ -89,47 +94,65 @@
 
     function App(){
       // x,y as % of world (responsive)
-      const initial={ x:15, y:25, needs:{hunger:80,thirst:80,energy:80,fun:70}, age:0, stage:'Baby', wins:{fed:0,drank:0,napped:0,played:0}, calm:false };
+      const initial={ x:15, y:25, needs:{hunger:80,thirst:80,energy:80,fun:70}, age:0, stage:'Baby', wins:{fed:0,drank:0,napped:0,played:0} };
       const [s,setS]=useLocalStorageState(STORAGE_KEY, initial);
       const [dragging,setDragging]=useState(false);
       const [now,setNow]=useState(Date.now());
       const [msg,setMsg]=useState('');
       const [showPause,setShowPause]=useState(false);
+      const [zone,setZone]=useState(null); // 'lake' | 'field' | 'barn' | 'play' | null
       const worldRef=useRef(null);
 
-      // day-night cycle (6 minutes)
+      // day-night cycle (6 minutes) purely visual
       const dayMs=6*60*1000;
       useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),1000); return ()=>clearInterval(id); },[]);
       const phase=((now%dayMs)/dayMs); const isNight = phase>0.7 || phase<0.2;
 
-      // needs decay + aging
+      // master tick at 500 ms for smoother recharge/drain
       useEffect(()=>{
-        if(s.calm) return;
+        const id=setInterval(()=>tick(0.5), 500); // delta(sec) = 0.5
+        return ()=>clearInterval(id);
+      },[zone, s.needs, now]);
+
+      function tick(dt){
+        // figure out which zone we are in on every tick
+        const current = hitZoneAtPercent(s.x, s.y);
+        if(current !== zone) setZone(current);
+
         setS(prev=>{
-          const dec=isNight? {hunger:0.7,thirst:0.7,energy:-0.5,fun:0.4} : {hunger:1,thirst:1,energy:0.6,fun:1};
-          const needs={...prev.needs};
-          needs.hunger = clamp(needs.hunger - dec.hunger, 0, 100);
-          needs.thirst = clamp(needs.thirst - dec.thirst, 0, 100);
-          needs.energy = clamp(needs.energy - dec.energy, 0, 100);
-          needs.fun    = clamp(needs.fun    - dec.fun,    0, 100);
+          const needs = {...prev.needs};
+          // drain all needs
+          needs.hunger = clamp(needs.hunger - DRAIN.hunger*dt, 0, 100);
+          needs.thirst = clamp(needs.thirst - DRAIN.thirst*dt, 0, 100);
+          needs.energy = clamp(needs.energy - DRAIN.energy*dt, 0, 100);
+          needs.fun    = clamp(needs.fun    - DRAIN.fun*dt,    0, 100);
+
+          // recharge matching need based on zone & time spent
+          if(current === 'lake')   needs.thirst = clamp(needs.thirst + RECHARGE.lake.thirst*dt, 0, 100);
+          if(current === 'field')  needs.hunger = clamp(needs.hunger + RECHARGE.field.hunger*dt, 0, 100);
+          if(current === 'barn')   needs.energy = clamp(needs.energy + RECHARGE.barn.energy*dt, 0, 100);
+          if(current === 'play')   needs.fun    = clamp(needs.fun    + RECHARGE.play.fun*dt,    0, 100);
+
           return {...prev, needs};
         });
+
         // gentle prompts
-        if(Math.random()<0.15){
+        if(Math.random()<0.08){
           const lows=Object.entries(s.needs).filter(([,v])=>v<55);
           if(lows.length){
             const k=lows[Math.floor(Math.random()*lows.length)][0];
             setMsg(k==='hunger'?'Hungry!':k==='thirst'?'Thirsty!':k==='energy'?'Sleepy…':'Play time!');
-            setTimeout(()=>setMsg(''),2000);
+            setTimeout(()=>setMsg(''),1600);
           }
         }
-        // aging
+
+        // age & stages
         const avg=(s.needs.hunger+s.needs.thirst+s.needs.energy+s.needs.fun)/4;
         if(avg>70) setS(p=>({...p, age:p.age+1}));
         setS(p=>{ let stage='Baby'; if(p.age>90) stage='Adult'; else if(p.age>60) stage='Teen'; else if(p.age>30) stage='Kid'; return p.stage===stage? p : {...p, stage}; });
-      },[now]);
+      }
 
-      // pointer to % helpers
+      // map pointer position to % of world
       function posToPercent(e){
         const r=worldRef.current.getBoundingClientRect();
         const cx=(e.clientX??e.touches?.[0]?.clientX)-r.left;
@@ -138,45 +161,32 @@
       }
       function onStart(e){ setDragging(true); const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
       function onMove(e){ if(!dragging) return; const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
-      function onEnd(){ setDragging(false); checkZone(); }
-
-      function bumpNeed(name,amount){
-        setS(prev=>{
-          const needs={...prev.needs}; needs[name]=clamp(needs[name]+amount,0,100);
-          const wins={...prev.wins};
-          if(name==='hunger') wins.fed++;
-          if(name==='thirst') wins.drank++;
-          if(name==='energy') wins.napped++;
-          if(name==='fun')    wins.played++;
-          return {...prev, needs, wins};
-        });
+      function onEnd(){ setDragging(false); // update zone right away
+        const z = hitZoneAtPercent(s.x, s.y); setZone(z);
+        // bump a small win count when we *arrive* in a zone
+        if(z==='field') setS(p=>({...p, wins:{...p.wins, fed:p.wins.fed+1}}));
+        if(z==='lake')  setS(p=>({...p, wins:{...p.wins, drank:p.wins.drank+1}}));
+        if(z==='barn')  setS(p=>({...p, wins:{...p.wins, napped:p.wins.napped+1}}));
+        if(z==='play')  setS(p=>({...p, wins:{...p.wins, played:p.wins.played+1}}));
       }
 
-      function applyZone(key){
-        if(key==='lake'){ bumpNeed('thirst',22); setMsg('Glug glug!'); }
-        if(key==='field'){ bumpNeed('hunger',22); setMsg('Munch munch!'); }
-        if(key==='barn'){ bumpNeed('energy',24); setMsg('Zzz…'); }
-        if(key==='play'){ bumpNeed('fun',22); setMsg('That was fun!'); }
-        setTimeout(()=>setMsg(''),1600);
-      }
-
-      // Hit-test: check which .zone div the unicorn is over
-      function checkZone(){
-        const {x,y}=s;
+      // Hit-test helper: which zone div contains the (x%, y%) point?
+      function hitZoneAtPercent(xPct, yPct){
+        if(!worldRef.current) return null;
         const rWorld=worldRef.current.getBoundingClientRect();
-        const px=rWorld.left + (x/100)*rWorld.width;
-        const py=rWorld.top  + (y/100)*rWorld.height;
+        const px=rWorld.left + (xPct/100)*rWorld.width;
+        const py=rWorld.top  + (yPct/100)*rWorld.height;
         const els=[...worldRef.current.querySelectorAll('.grid > .zone')];
         for(const el of els){
           const rr=el.getBoundingClientRect();
           if(px>rr.left && px<rr.right && py>rr.top && py<rr.bottom){
-            if(el.classList.contains('lake')) applyZone('lake');
-            else if(el.classList.contains('field')) applyZone('field');
-            else if(el.classList.contains('play')) applyZone('play');
-            else if(el.classList.contains('barn')) applyZone('barn');
-            break;
+            if(el.classList.contains('lake')) return 'lake';
+            if(el.classList.contains('field')) return 'field';
+            if(el.classList.contains('play')) return 'play';
+            if(el.classList.contains('barn')) return 'barn';
           }
         }
+        return null;
       }
 
       function resetSave(){ localStorage.removeItem(STORAGE_KEY); window.location.reload(); }
@@ -195,9 +205,6 @@
                 <span className="pill">Stage: {s.stage}</span>
                 <span className="pill">Day: {Math.floor((now % dayMs)/(dayMs/24))}</span>
                 <button className="btn" onClick={()=>setShowPause(true)}>Pause ▶︎▮</button>
-                <label className="pill">
-                  <input type="checkbox" checked={s.calm} onChange={e=>setS({...s, calm:e.target.checked})}/> Calm Mode
-                </label>
               </div>
               <div className="meters">
                 {Object.entries({hunger:"🍎",thirst:"💧",energy:"🛌",fun:"🎈"}).map(([k,em])=>{
@@ -210,6 +217,7 @@
                     </span>
                   );
                 })}
+                {zone && <span className="pill">Here: {zone === 'lake' ? 'Lake 💧' : zone === 'field' ? 'Field 🍎' : zone === 'barn' ? 'Barn 💤' : 'Play 🎈'}</span>}
               </div>
             </div>
           </div>
