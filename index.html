@@ -40,7 +40,7 @@
   .btn{cursor:pointer; padding:8px 14px; border-radius:10px; border:none; font-weight:700; background:#fff;}
   .btn:hover{filter:brightness(.97);}
 
-  /* Meters */
+  /* Meters: light grey background with black fill */
   .meters{display:flex; gap:10px; flex-wrap:wrap;}
   .meter{width:160px; max-width:32vw; height:12px; background:#d3d3d3; border-radius:20px; overflow:hidden;}
   .fill{display:block; height:100%; background:#000; transition:width .15s linear;}
@@ -81,7 +81,7 @@
   <script type="text/babel">
     const {useState,useRef,useEffect} = React;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-    const STORAGE_KEY='unicorn_ranch_levels_v2';
+    const STORAGE_KEY='unicorn_ranch_levels_v3';
 
     // Base rates (per second). Scale each level.
     const BASE_DRAIN    = { hunger: 1.0, thirst: 1.4, energy: 0.9, fun: 1.2 };
@@ -113,7 +113,7 @@
 
       // Main loop @ 10Hz
       useEffect(()=>{
-        if(s.status) return;
+        if(s.status) return; // pause when modal up
         const dt = 0.1;
         const id = setInterval(()=>{
           setS(prev=>{
@@ -149,7 +149,7 @@
           });
         }, dt*1000);
         return ()=>clearInterval(id);
-      },[s.status, s.level]);
+      },[s.status, s.level]); // recalc when level or status changes
 
       // Pointer helpers
       function posToPercent(e){
@@ -162,7 +162,7 @@
       function onMove(e){ if(!dragging) return; const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
       function onEnd(){ setDragging(false); }
 
-      // Zone at (x%, y%)
+      // Zone detection at (x%, y%)
       function hitZoneAtPercent(xPct, yPct){
         if(!worldRef.current) return null;
         const rWorld=worldRef.current.getBoundingClientRect();
@@ -181,6 +181,7 @@
         return null;
       }
 
+      // Restart everything
       function restartGame(){
         setS({
           x:15, y:25,
@@ -191,12 +192,13 @@
         });
       }
 
+      // Advance to next level: reset bars to full & timer to 30s
       function startNextLevel(){
         setS(prev=>({
           ...prev,
           level: prev.level + 1,
           needs:{hunger:100,thirst:100,energy:100,fun:100},  // reset bars each level
-          levelTime:30,
+          levelTime:30,                                       // 30s per level
           status:null
         }));
       }
