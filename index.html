@@ -86,9 +86,9 @@
     // Base rates (per second). Scale each level.
     const BASE_DRAIN    = { hunger: 1.0, thirst: 1.4, energy: 0.9, fun: 1.2 };
     const BASE_RECHARGE = { lake: {thirst: 6}, field: {hunger: 6}, barn: {energy: 8}, play: {fun: 6} };
-    // Growth per level (both 25%)
-    const DRAIN_GROWTH    = 0.25;
-    const RECHARGE_GROWTH = 0.25;
+    // Growth per level (both 50%)
+    const DRAIN_GROWTH    = 0.50;
+    const RECHARGE_GROWTH = 0.50;
 
     function useLocalStorageState(key, initial){
       const [state,setState]=useState(()=>{ try{ const raw=localStorage.getItem(key); return raw? JSON.parse(raw): initial;}catch{ return initial; }});
