@@ -42,9 +42,8 @@
 
   /* Meters */
   .meters{display:flex; gap:8px; flex-wrap:wrap;}
-  .meter{width:130px; max-width:28vw; height:10px; background:#ececec; border-radius:20px; overflow:hidden;}
-  .fill{display:block; height:100%; background:#5bd65b; transition:width .25s linear;}
-  .warn{background:#ffd166;} .crit{background:#ef476f;}
+  .meter{width:130px; max-width:28vw; height:10px; background:#d3d3d3; border-radius:20px; overflow:hidden;}
+  .fill{display:block; height:100%; background:black; transition:width .25s linear;}
 
   /* 2×2 grid for zones */
   .grid{
@@ -73,7 +72,6 @@
 <body>
   <div id="app"></div>
 
-  <!-- React 18 UMD + JSX via Babel (no build step) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -81,11 +79,9 @@
   <script type="text/babel">
     const {useState,useRef,useEffect} = React;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-    const STORAGE_KEY='unicorn_ranch_react_v7';
+    const STORAGE_KEY='unicorn_ranch_react_v8';
 
-    // Different drain rates (per second)
     const DRAIN = { hunger: 1.2, thirst: 1.6, energy: 0.9, fun: 1.4 };
-    // Recharge rates (per second) when in the corresponding zone
     const RECHARGE = { lake: {thirst: 7}, field: {hunger: 7}, barn: {energy: 9}, play: {fun: 7} };
 
     function useLocalStorageState(key, initial){
@@ -95,7 +91,6 @@
     }
 
     function App(){
-      // x,y as % of world (responsive)
       const initial={ x:15, y:25, needs:{hunger:80,thirst:80,energy:80,fun:70}, age:0, stage:'Baby', wins:{fed:0,drank:0,napped:0,played:0} };
       const [s,setS]=useLocalStorageState(STORAGE_KEY, initial);
       const [dragging,setDragging]=useState(false);
@@ -104,55 +99,33 @@
       const [showPause,setShowPause]=useState(false);
       const worldRef=useRef(null);
 
-      // day-night cycle (visual only)
       const dayMs=6*60*1000;
       useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),1000); return ()=>clearInterval(id); },[]);
       const isNight = ((now%dayMs)/dayMs)>0.7 || ((now%dayMs)/dayMs)<0.2;
 
-      // Single loop — 10 times/sec; drains always, recharges only in matching zone
       useEffect(()=>{
-        const dt = 0.1; // seconds per tick
+        const dt = 0.1;
         const id = setInterval(()=>{
           setS(prev=>{
             const current = hitZoneAtPercent(prev.x, prev.y);
             const needs = {...prev.needs};
 
-            // drain all needs
             needs.hunger = clamp(needs.hunger - DRAIN.hunger*dt, 0, 100);
             needs.thirst = clamp(needs.thirst - DRAIN.thirst*dt, 0, 100);
             needs.energy = clamp(needs.energy - DRAIN.energy*dt, 0, 100);
             needs.fun    = clamp(needs.fun    - DRAIN.fun*dt,    0, 100);
 
-            // recharge only the matching one
             if(current==='lake')  needs.thirst = clamp(needs.thirst + RECHARGE.lake.thirst*dt, 0, 100);
             if(current==='field') needs.hunger = clamp(needs.hunger + RECHARGE.field.hunger*dt, 0, 100);
             if(current==='barn')  needs.energy = clamp(needs.energy + RECHARGE.barn.energy*dt, 0, 100);
             if(current==='play')  needs.fun    = clamp(needs.fun    + RECHARGE.play.fun*dt,    0, 100);
 
-            // tiny prompt sometimes
-            if(Math.random()<0.04){
-              const lows=Object.entries(needs).filter(([,v])=>v<55);
-              if(lows.length){
-                const k=lows[Math.floor(Math.random()*lows.length)][0];
-                setMsg(k==='hunger'?'Hungry!':k==='thirst'?'Thirsty!':k==='energy'?'Sleepy…':'Play time!');
-                setTimeout(()=>setMsg(''),1600);
-              }
-            }
-
-            // age & stage
-            let age = prev.age;
-            const avg=(needs.hunger+needs.thirst+needs.energy+needs.fun)/4;
-            if(avg>70) age += dt;
-            let stage='Baby';
-            if(age>90) stage='Adult'; else if(age>60) stage='Teen'; else if(age>30) stage='Kid';
-
-            return {...prev, needs, age, stage};
+            return {...prev, needs};
           });
         }, dt*1000);
         return ()=>clearInterval(id);
       },[]);
 
-      // Pointer helpers
       function posToPercent(e){
         const r=worldRef.current.getBoundingClientRect();
         const cx=(e.clientX??e.touches?.[0]?.clientX)-r.left;
@@ -161,15 +134,8 @@
       }
       function onStart(e){ setDragging(true); const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
       function onMove(e){ if(!dragging) return; const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
-      function onEnd(){ setDragging(false);
-        const z = hitZoneAtPercent(s.x, s.y);
-        if(z==='field') setS(p=>({...p, wins:{...p.wins, fed:p.wins.fed+1}}));
-        if(z==='lake')  setS(p=>({...p, wins:{...p.wins, drank:p.wins.drank+1}}));
-        if(z==='barn')  setS(p=>({...p, wins:{...p.wins, napped:p.wins.napped+1}}));
-        if(z==='play')  setS(p=>({...p, wins:{...p.wins, played:p.wins.played+1}}));
-      }
+      function onEnd(){ setDragging(false); }
 
-      // Which zone contains (x%, y%)?
       function hitZoneAtPercent(xPct, yPct){
         if(!worldRef.current) return null;
         const rWorld=worldRef.current.getBoundingClientRect();
@@ -188,8 +154,6 @@
         return null;
       }
 
-      function resetSave(){ localStorage.removeItem(STORAGE_KEY); window.location.reload(); }
-
       const currentZone = hitZoneAtPercent(s.x, s.y);
 
       return (
@@ -198,14 +162,11 @@
              onMouseMove={onMove} onMouseUp={onEnd}
              onTouchMove={onMove} onTouchEnd={onEnd}
         >
-          {/* UI */}
           <div className="ui">
             <div className="card">
               <div className="row">
                 <strong>Unicorn Ranch</strong>
                 <span className="pill">Stage: {s.stage}</span>
-                <span className="pill">Day: {Math.floor((now % dayMs)/(dayMs/24))}</span>
-                <button className="btn" onClick={()=>setShowPause(true)}>Pause ▶︎▮</button>
                 {currentZone && <span className="pill">Here: {
                   currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'
                 }</span>}
@@ -213,11 +174,10 @@
               <div className="meters">
                 {Object.entries({hunger:"🍎",thirst:"💧",energy:"🛌",fun:"🎈"}).map(([k,em])=>{
                   const v=s.needs[k];
-                  const cls=v>65?"fill": v>35?"warn":"crit";
                   return (
                     <span className="pill" key={k}>
                       <span style={{fontSize:18}}>{em}</span>
-                      <span className="meter"><span className={`fill ${cls}`} style={{width:`${v}%`}}/></span>
+                      <span className="meter"><span className="fill" style={{width:`${v}%`}}/></span>
                     </span>
                   );
                 })}
@@ -225,7 +185,6 @@
             </div>
           </div>
 
-          {/* 2×2 zones */}
           <div className="grid">
             <div className="zone lake"><div className="label">Lake 💧</div></div>
             <div className="zone barn"><div className="label">Barn 💤</div><div className="door"></div><div className="stoop"></div></div>
@@ -233,26 +192,11 @@
             <div className="zone play"><div className="label">Play 🎈</div></div>
           </div>
 
-          {/* Unicorn */}
           <div className="unicorn" style={{left:`${s.x}%`, top:`${s.y}%`}}
                onMouseDown={onStart} onTouchStart={onStart}>
             <div className="u-emoji">🦄</div>
             {msg && <div className="speech">{msg}</div>}
           </div>
-
-          {/* Pause */}
-          {showPause && (
-            <div className="modal">
-              <div className="panel">
-                <h2>Paused ⏸️</h2>
-                <p>Today’s Wins: 🍎 {s.wins.fed} • 💧 {s.wins.drank} • 💤 {s.wins.napped} • 🎈 {s.wins.played}</p>
-                <div className="row">
-                  <button className="btn" onClick={()=>setShowPause(false)}>Resume</button>
-                  <button className="btn" onClick={resetSave}>Reset Game</button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
