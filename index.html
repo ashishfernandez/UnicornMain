@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Unicorn Ranch</title>
-<meta name="description" content="Keep the unicorn's needs filled to level up!" />
 <style>
   :root{
     --sky1:#9fd3ff; --sky2:#cfe8ff; --grass:#b8e986; --water:#9fd3ff;
@@ -40,10 +39,10 @@
   .btn{cursor:pointer; padding:8px 14px; border-radius:10px; border:none; font-weight:700; background:#fff;}
   .btn:hover{filter:brightness(.97);}
 
-  /* Meters: light grey background with black fill */
+  /* Meters: light grey background, fill changes color */
   .meters{display:flex; gap:10px; flex-wrap:wrap;}
   .meter{width:160px; max-width:32vw; height:12px; background:#d3d3d3; border-radius:20px; overflow:hidden;}
-  .fill{display:block; height:100%; background:#000; transition:width .15s linear;}
+  .fill{display:block; height:100%; transition:width .15s linear, background-color .15s linear;}
 
   /* 2×2 grid for zones */
   .grid{
@@ -81,14 +80,12 @@
   <script type="text/babel">
     const {useState,useRef,useEffect} = React;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-    const STORAGE_KEY='unicorn_ranch_levels_v3';
+    const STORAGE_KEY='unicorn_ranch_levels_v4';
 
-    // Base rates (per second). Scale each level.
     const BASE_DRAIN    = { hunger: 1.0, thirst: 1.4, energy: 0.9, fun: 1.2 };
     const BASE_RECHARGE = { lake: {thirst: 6}, field: {hunger: 6}, barn: {energy: 8}, play: {fun: 6} };
-    // Growth per level (both 50%)
-    const DRAIN_GROWTH    = 0.50;
-    const RECHARGE_GROWTH = 0.50;
+    const DRAIN_GROWTH    = 0.80; // 80% faster each level
+    const RECHARGE_GROWTH = 0.25;
 
     function useLocalStorageState(key, initial){
       const [state,setState]=useState(()=>{ try{ const raw=localStorage.getItem(key); return raw? JSON.parse(raw): initial;}catch{ return initial; }});
@@ -101,8 +98,8 @@
         x:15, y:25,
         needs:{hunger:100,thirst:100,energy:100,fun:100},
         level:1,
-        levelTime:30,            // seconds per level
-        status:null,             // 'gameover' | 'nextlevel' | null
+        levelTime:30,
+        status:null,
       };
       const [s,setS]=useLocalStorageState(STORAGE_KEY, initial);
       const [dragging,setDragging]=useState(false);
@@ -111,35 +108,31 @@
       const drainMult    = 1 + (s.level-1)*DRAIN_GROWTH;
       const rechargeMult = 1 + (s.level-1)*RECHARGE_GROWTH;
 
-      // Main loop @ 10Hz
       useEffect(()=>{
-        if(s.status) return; // pause when modal up
+        if(s.status) return;
         const dt = 0.1;
         const id = setInterval(()=>{
           setS(prev=>{
             if(prev.status) return prev;
-
             const current = hitZoneAtPercent(prev.x, prev.y);
-
             const needs = {...prev.needs};
-            // drain all
-            needs.hunger = clamp(needs.hunger - BASE_DRAIN.hunger*drainMult*dt, 0, 100);
-            needs.thirst = clamp(needs.thirst - BASE_DRAIN.thirst*drainMult*dt, 0, 100);
-            needs.energy = clamp(needs.energy - BASE_DRAIN.energy*drainMult*dt, 0, 100);
-            needs.fun    = clamp(needs.fun    - BASE_DRAIN.fun   *drainMult*dt, 0, 100);
 
-            // recharge matching only
-            if(current==='lake')  needs.thirst = clamp(needs.thirst + BASE_RECHARGE.lake.thirst   *rechargeMult*dt, 0, 100);
-            if(current==='field') needs.hunger = clamp(needs.hunger + BASE_RECHARGE.field.hunger *rechargeMult*dt, 0, 100);
-            if(current==='barn')  needs.energy = clamp(needs.energy + BASE_RECHARGE.barn.energy  *rechargeMult*dt, 0, 100);
-            if(current==='play')  needs.fun    = clamp(needs.fun    + BASE_RECHARGE.play.fun     *rechargeMult*dt, 0, 100);
+            needs.hunger -= BASE_DRAIN.hunger*drainMult*dt;
+            needs.thirst -= BASE_DRAIN.thirst*drainMult*dt;
+            needs.energy -= BASE_DRAIN.energy*drainMult*dt;
+            needs.fun    -= BASE_DRAIN.fun   *drainMult*dt;
 
-            // game over if any empty
+            if(current==='lake')  needs.thirst = clamp(needs.thirst + BASE_RECHARGE.lake.thirst*rechargeMult*dt, 0, 100);
+            if(current==='field') needs.hunger = clamp(needs.hunger + BASE_RECHARGE.field.hunger*rechargeMult*dt, 0, 100);
+            if(current==='barn')  needs.energy = clamp(needs.energy + BASE_RECHARGE.barn.energy*rechargeMult*dt, 0, 100);
+            if(current==='play')  needs.fun    = clamp(needs.fun    + BASE_RECHARGE.play.fun   *rechargeMult*dt, 0, 100);
+
+            for(const k in needs) needs[k] = clamp(needs[k], 0, 100);
+
             if(needs.hunger<=0 || needs.thirst<=0 || needs.energy<=0 || needs.fun<=0){
               return {...prev, needs, status:'gameover'};
             }
 
-            // countdown
             const time = prev.levelTime - dt;
             if(time <= 0){
               return {...prev, needs, levelTime:0, status:'nextlevel'};
@@ -149,9 +142,8 @@
           });
         }, dt*1000);
         return ()=>clearInterval(id);
-      },[s.status, s.level]); // recalc when level or status changes
+      },[s.status, s.level]);
 
-      // Pointer helpers
       function posToPercent(e){
         const r=worldRef.current.getBoundingClientRect();
         const cx=(e.clientX??e.touches?.[0]?.clientX)-r.left;
@@ -162,7 +154,6 @@
       function onMove(e){ if(!dragging) return; const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
       function onEnd(){ setDragging(false); }
 
-      // Zone detection at (x%, y%)
       function hitZoneAtPercent(xPct, yPct){
         if(!worldRef.current) return null;
         const rWorld=worldRef.current.getBoundingClientRect();
@@ -181,7 +172,6 @@
         return null;
       }
 
-      // Restart everything
       function restartGame(){
         setS({
           x:15, y:25,
@@ -192,13 +182,12 @@
         });
       }
 
-      // Advance to next level: reset bars to full & timer to 30s
       function startNextLevel(){
         setS(prev=>({
           ...prev,
           level: prev.level + 1,
-          needs:{hunger:100,thirst:100,energy:100,fun:100},  // reset bars each level
-          levelTime:30,                                       // 30s per level
+          needs:{hunger:100,thirst:100,energy:100,fun:100},
+          levelTime:30,
           status:null
         }));
       }
@@ -220,6 +209,7 @@
                 {currentZone && <span className="pill">
                   Here: {currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'}
                 </span>}
+                <button className="btn" onClick={restartGame}>Restart Game</button>
               </div>
               <div className="meters">
                 {Object.entries({hunger:"🍎",thirst:"💧",energy:"💤",fun:"🎈"}).map(([k,em])=>{
@@ -227,7 +217,7 @@
                   return (
                     <span className="pill" key={k}>
                       <span style={{fontSize:18}}>{em}</span>
-                      <span className="meter"><span className="fill" style={{width:`${v}%`}}/></span>
+                      <span className="meter"><span className="fill" style={{width:`${v}%`, backgroundColor: v<50 ? 'red' : 'black'}}/></span>
                     </span>
                   );
                 })}
@@ -263,7 +253,7 @@
             <div className="modal">
               <div className="panel">
                 <h2>Congrats! You're going to the next level</h2>
-                <p>Bars will drain and recharge faster (50% per level).</p>
+                <p>Bars will drain and recharge faster!</p>
                 <button className="btn" onClick={startNextLevel}>Start Level {s.level+1}</button>
               </div>
             </div>
