@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Unicorn Ranch (React)</title>
-<meta name="description" content="Raise a baby unicorn – feed, drink, play, and nap!" />
+<title>Unicorn Ranch</title>
+<meta name="description" content="Raise a baby unicorn – keep needs filled to level up!" />
 <style>
   :root{
     --sky1:#9fd3ff; --sky2:#cfe8ff; --grass:#b8e986; --water:#9fd3ff;
@@ -25,7 +25,6 @@
     box-shadow:0 10px 40px rgba(0,0,0,.15);
     background:linear-gradient(var(--sky1),var(--sky2) 35%, var(--grass) 35%);
   }
-  .night{ filter:brightness(.85) saturate(.9); }
 
   /* Top UI */
   .ui{ position:absolute; inset:12px 12px auto 12px; display:flex; flex-wrap:wrap; gap:10px; }
@@ -37,13 +36,14 @@
     max-width:calc(100% - 24px);
   }
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
-  .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#fff; font-weight:600;}
-  .btn{cursor:pointer; padding:6px 12px; border-radius:10px; border:none; font-weight:700; background:#fff;}
+  .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px; background:#fff; font-weight:700;}
+  .btn{cursor:pointer; padding:8px 14px; border-radius:10px; border:none; font-weight:700; background:#fff;}
+  .btn:hover{filter:brightness(.97);}
 
   /* Meters */
-  .meters{display:flex; gap:8px; flex-wrap:wrap;}
-  .meter{width:130px; max-width:28vw; height:10px; background:#d3d3d3; border-radius:20px; overflow:hidden;}
-  .fill{display:block; height:100%; background:black; transition:width .25s linear;}
+  .meters{display:flex; gap:10px; flex-wrap:wrap;}
+  .meter{width:160px; max-width:32vw; height:12px; background:#d3d3d3; border-radius:20px; overflow:hidden;}
+  .fill{display:block; height:100%; background:#000; transition:width .15s linear;}
 
   /* 2×2 grid for zones */
   .grid{
@@ -64,14 +64,17 @@
   .u-emoji{font-size:64px; line-height:1; position:absolute; left:50%; top:50%; translate:-50% -50%;}
   .speech{position:absolute; left:0; top:-12px; translate:-10% -100%; background:#fff; padding:6px 10px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,.2); font-weight:700;}
 
-  /* Pause modal */
+  /* Modal */
   .modal{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5);}
-  .panel{background:#fff; padding:18px; border-radius:16px; width:min(92%,520px);}
+  .panel{background:#fff; padding:22px; border-radius:16px; width:min(92%,520px); text-align:center;}
+  .panel h2{margin:0 0 10px;}
+  .panel p{margin:0 0 16px;}
 </style>
 </head>
 <body>
   <div id="app"></div>
 
+  <!-- React UMD + Babel -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -79,10 +82,15 @@
   <script type="text/babel">
     const {useState,useRef,useEffect} = React;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-    const STORAGE_KEY='unicorn_ranch_react_v8';
+    const STORAGE_KEY='unicorn_ranch_levels_v1';
 
-    const DRAIN = { hunger: 1.2, thirst: 1.6, energy: 0.9, fun: 1.4 };
-    const RECHARGE = { lake: {thirst: 7}, field: {hunger: 7}, barn: {energy: 9}, play: {fun: 7} };
+    // Base rates (per second). These will scale up each level.
+    const BASE_DRAIN   = { hunger: 1.0, thirst: 1.4, energy: 0.9, fun: 1.2 };
+    const BASE_RECHARGE= { lake: {thirst: 6}, field: {hunger: 6}, barn: {energy: 8}, play: {fun: 6} };
+
+    // How much the difficulty increases per level (multiplier)
+    const DRAIN_GROWTH   = 0.20;   // +20% drain per level
+    const RECHARGE_GROWTH= 0.25;   // +25% recharge per level
 
     function useLocalStorageState(key, initial){
       const [state,setState]=useState(()=>{ try{ const raw=localStorage.getItem(key); return raw? JSON.parse(raw): initial;}catch{ return initial; }});
@@ -91,41 +99,67 @@
     }
 
     function App(){
-      const initial={ x:15, y:25, needs:{hunger:80,thirst:80,energy:80,fun:70}, age:0, stage:'Baby', wins:{fed:0,drank:0,napped:0,played:0} };
+      const initial={
+        x:15, y:25,
+        needs:{hunger:80,thirst:80,energy:80,fun:70},
+        level:1,
+        levelTime:15,              // seconds remaining in current level
+        status:null,               // 'gameover' | 'nextlevel' | null
+      };
       const [s,setS]=useLocalStorageState(STORAGE_KEY, initial);
       const [dragging,setDragging]=useState(false);
-      const [now,setNow]=useState(Date.now());
-      const [msg,setMsg]=useState('');
-      const [showPause,setShowPause]=useState(false);
       const worldRef=useRef(null);
 
-      const dayMs=6*60*1000;
-      useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),1000); return ()=>clearInterval(id); },[]);
-      const isNight = ((now%dayMs)/dayMs)>0.7 || ((now%dayMs)/dayMs)<0.2;
+      // Derived multipliers from level
+      const drainMult    = 1 + (s.level-1)*DRAIN_GROWTH;
+      const rechargeMult = 1 + (s.level-1)*RECHARGE_GROWTH;
 
+      // Main game loop @ 10Hz
       useEffect(()=>{
+        if(s.status) return; // pause when modal is open
         const dt = 0.1;
         const id = setInterval(()=>{
           setS(prev=>{
+            // Early exit if already paused/status
+            if(prev.status) return prev;
+
+            // Compute current zone by position
             const current = hitZoneAtPercent(prev.x, prev.y);
+
+            // Drain
+            const d = BASE_DRAIN;
             const needs = {...prev.needs};
+            needs.hunger = clamp(needs.hunger - d.hunger*drainMult*dt, 0, 100);
+            needs.thirst = clamp(needs.thirst - d.thirst*drainMult*dt, 0, 100);
+            needs.energy = clamp(needs.energy - d.energy*drainMult*dt, 0, 100);
+            needs.fun    = clamp(needs.fun    - d.fun   *drainMult*dt, 0, 100);
 
-            needs.hunger = clamp(needs.hunger - DRAIN.hunger*dt, 0, 100);
-            needs.thirst = clamp(needs.thirst - DRAIN.thirst*dt, 0, 100);
-            needs.energy = clamp(needs.energy - DRAIN.energy*dt, 0, 100);
-            needs.fun    = clamp(needs.fun    - DRAIN.fun*dt,    0, 100);
+            // Recharge matching need only
+            const r = BASE_RECHARGE;
+            if(current==='lake')  needs.thirst = clamp(needs.thirst + r.lake.thirst  *rechargeMult*dt, 0, 100);
+            if(current==='field') needs.hunger = clamp(needs.hunger + r.field.hunger *rechargeMult*dt, 0, 100);
+            if(current==='barn')  needs.energy = clamp(needs.energy + r.barn.energy  *rechargeMult*dt, 0, 100);
+            if(current==='play')  needs.fun    = clamp(needs.fun    + r.play.fun     *rechargeMult*dt, 0, 100);
 
-            if(current==='lake')  needs.thirst = clamp(needs.thirst + RECHARGE.lake.thirst*dt, 0, 100);
-            if(current==='field') needs.hunger = clamp(needs.hunger + RECHARGE.field.hunger*dt, 0, 100);
-            if(current==='barn')  needs.energy = clamp(needs.energy + RECHARGE.barn.energy*dt, 0, 100);
-            if(current==='play')  needs.fun    = clamp(needs.fun    + RECHARGE.play.fun*dt,    0, 100);
+            // Game over check (any bar empty)
+            if(needs.hunger<=0 || needs.thirst<=0 || needs.energy<=0 || needs.fun<=0){
+              return {...prev, needs, status:'gameover'};
+            }
 
-            return {...prev, needs};
+            // Level timer countdown
+            let time = prev.levelTime - dt;
+            if(time <= 0){
+              // Survived! Next level message; pause loop via status
+              return {...prev, needs, levelTime:0, status:'nextlevel'};
+            }
+
+            return {...prev, needs, levelTime:time};
           });
         }, dt*1000);
         return ()=>clearInterval(id);
-      },[]);
+      },[s.status, s.level, drainMult, rechargeMult]);
 
+      // Pointer helpers
       function posToPercent(e){
         const r=worldRef.current.getBoundingClientRect();
         const cx=(e.clientX??e.touches?.[0]?.clientX)-r.left;
@@ -136,6 +170,7 @@
       function onMove(e){ if(!dragging) return; const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
       function onEnd(){ setDragging(false); }
 
+      // Which zone contains (x%, y%)?
       function hitZoneAtPercent(xPct, yPct){
         if(!worldRef.current) return null;
         const rWorld=worldRef.current.getBoundingClientRect();
@@ -154,22 +189,42 @@
         return null;
       }
 
+      function restartGame(){
+        setS({
+          x:15, y:25,
+          needs:{hunger:80,thirst:80,energy:80,fun:70},
+          level:1,
+          levelTime:15,
+          status:null,
+        });
+      }
+
+      function goToNextLevel(){
+        setS(prev=>({
+          ...prev,
+          level: prev.level + 1,
+          levelTime: 15,
+          status: null
+        }));
+      }
+
       const currentZone = hitZoneAtPercent(s.x, s.y);
 
       return (
-        <div className={"world"+(isNight?" night":"")}
+        <div className="world"
              ref={worldRef}
              onMouseMove={onMove} onMouseUp={onEnd}
              onTouchMove={onMove} onTouchEnd={onEnd}
         >
+          {/* UI */}
           <div className="ui">
             <div className="card">
               <div className="row">
-                <strong>Unicorn Ranch</strong>
-                <span className="pill">Stage: {s.stage}</span>
-                {currentZone && <span className="pill">Here: {
-                  currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'
-                }</span>}
+                <span className="pill">Level: {s.level}</span>
+                <span className="pill">Time: {Math.ceil(s.levelTime)}s</span>
+                {currentZone && <span className="pill">
+                  Here: {currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'}
+                </span>}
               </div>
               <div className="meters">
                 {Object.entries({hunger:"🍎",thirst:"💧",energy:"🛌",fun:"🎈"}).map(([k,em])=>{
@@ -185,6 +240,7 @@
             </div>
           </div>
 
+          {/* 2×2 zones */}
           <div className="grid">
             <div className="zone lake"><div className="label">Lake 💧</div></div>
             <div className="zone barn"><div className="label">Barn 💤</div><div className="door"></div><div className="stoop"></div></div>
@@ -192,11 +248,31 @@
             <div className="zone play"><div className="label">Play 🎈</div></div>
           </div>
 
+          {/* Unicorn */}
           <div className="unicorn" style={{left:`${s.x}%`, top:`${s.y}%`}}
                onMouseDown={onStart} onTouchStart={onStart}>
             <div className="u-emoji">🦄</div>
-            {msg && <div className="speech">{msg}</div>}
           </div>
+
+          {/* Status Modals */}
+          {s.status==='gameover' && (
+            <div className="modal">
+              <div className="panel">
+                <h2>Game over! Try again!</h2>
+                <p>You reached level {s.level}.</p>
+                <button className="btn" onClick={restartGame}>Restart</button>
+              </div>
+            </div>
+          )}
+          {s.status==='nextlevel' && (
+            <div className="modal">
+              <div className="panel">
+                <h2>Congrats! You're going to the next level</h2>
+                <p>Bars will drain and recharge faster.</p>
+                <button className="btn" onClick={goToNextLevel}>Start Level {s.level+1}</button>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
