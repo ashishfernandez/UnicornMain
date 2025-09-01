@@ -139,10 +139,11 @@
 const {useState,useRef,useEffect} = React;
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
-/* Base per-second rates */
-const BASE_DRAIN    = { hunger: 1.0, thirst: 1.4, energy: 0.9, fun: 1.2 };
+/* Base drain rates */
+const BASE_DRAIN    = { hunger: 1.0, thirst: 1.0, energy: 1.0, fun: 1.0 };
 const BASE_RECHARGE = { lake: {thirst: 6}, field: {hunger: 6}, barn: {energy: 8}, play: {fun: 6} };
-/* Difficulty growth */
+
+/* Drain increase rates per level */
 const DRAIN_GROWTH    = 0.80;  // drain +80% per level
 const RECHARGE_GROWTH = 0.30;  // recharge +30% per level
 
@@ -286,8 +287,8 @@ function App(){
             Here: {currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'}
           </span>}
           <button className="btn btn-grey" onClick={restartGame}>Restart Game</button>
-          <button className="btn btn-donate" onClick={()=>window.open('https://donate.stripe.com/00wfZhbnj5gAepS5CN33W00', '_blank')}>Donate Now!</button>
-        </div>
+          <button className="btn btn-donate" onClick={()=>window.open('https://donate.stripe.com/00wfZhbnj5gAepS5CN33W00', '_blank')}>Donate Now!</button> {/* Stripe donation button */} 
+        </div>   
 
         <div className="row meters">
           {Object.entries({hunger:"🍎",thirst:"💧",energy:"💤",fun:"🎈"}).map(([k,em])=>{
