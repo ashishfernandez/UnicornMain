@@ -55,6 +55,8 @@
   .btn-blue:hover{ background:#1976d2; }
   .btn-grey{ background:#888; color:#fff; }
   .btn-grey:hover{ background:#777; }
+  .btn-donate{ background:#2d5a2d; color:#000; }
+  .btn-donate:hover{ background:#1a4d1a; }
 
   /* Bars: light grey track, black fill (red under 50%) */
   .meters{ display:flex; gap:calc(10px * var(--uiScale)); flex-wrap:wrap; }
@@ -283,6 +285,7 @@ function App(){
             Here: {currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'}
           </span>}
           <button className="btn btn-grey" onClick={restartGame}>Restart Game</button>
+          <button className="btn btn-donate" onClick={()=>window.open('https://buy.stripe.com/test_YOUR_STRIPE_LINK', '_blank')}>Donate</button>
         </div>
 
         <div className="row meters">
