@@ -6,128 +6,995 @@
 <title>Unicorn Ranch</title>
 <meta name="description" content="Keep the unicorn's needs filled to level up!" />
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --sky1:#9fd3ff; --sky2:#cfe8ff; --grass:#b8e986; --water:#9fd3ff;
-    --barn1:#f77; --barn2:#d26; --dirt:#e2c39a;
-    --uiScale: 1; /* desktop/tablet base */
+  :root {
+    /* Dark Fantasy Palette */
+    --bg-dark: #0a0a12;
+    --bg-gradient-1: #1a1a2e;
+    --bg-gradient-2: #16213e;
+    --accent-gold: #d4af37;
+    --accent-gold-light: #f4d03f;
+    --accent-gold-dark: #b8860b;
+    --accent-purple: #6c3483;
+    --accent-purple-light: #9b59b6;
+    --accent-blue: #2980b9;
+    --accent-blue-light: #5dade2;
+    --text-light: #f5e6d3;
+    --text-gold: #ffd700;
+    --danger-red: #c0392b;
+    --danger-glow: #e74c3c;
+    --success-green: #27ae60;
+    --success-glow: #2ecc71;
+
+    /* Zone Colors */
+    --lake-deep: #1a5276;
+    --lake-surface: #2980b9;
+    --lake-shimmer: #85c1e9;
+    --field-dark: #1e8449;
+    --field-light: #58d68d;
+    --field-gold: #f9e79f;
+    --barn-dark: #6e2c00;
+    --barn-wood: #a04000;
+    --barn-light: #dc7633;
+    --play-warm: #f39c12;
+    --play-light: #f8c471;
+    --play-glow: #fdebd0;
+
+    /* UI Scaling */
+    --uiScale: 1;
   }
 
-  /* Phones: make everything MUCH larger */
-  @media (max-width: 640px){
-    :root{ --uiScale: 10; }
+  @media (max-width: 640px) {
+    :root { --uiScale: 1.5; }
   }
 
-  /* Page */
-  html,body{ margin:0; height:100%; background:linear-gradient(var(--sky1),var(--sky2) 30%,var(--grass) 30%); }
-  body{ font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
-  #app{ min-height:100dvh; display:flex; justify-content:center; padding:8px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
-
-  /* World = column: UI on top, 2×2 grid fills remaining space */
-  .world{
-    display:flex; flex-direction:column;
-    width:100%; max-width:1100px;
-    height:100dvh;
-    border-radius:24px; overflow:hidden;
-    box-shadow:0 10px 40px rgba(0,0,0,.15);
-    background:linear-gradient(var(--sky1),var(--sky2) 35%, var(--grass) 35%);
-    position:relative;  
+  /* Keyframe Animations */
+  @keyframes float {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+    50% { transform: translate(-50%, -50%) translateY(-8px); }
   }
 
-  /* Top UI */
-  .ui{
-    padding:calc(8px * var(--uiScale));
-    background:rgba(255,255,255,.92);
-    display:flex; flex-direction:column; gap:calc(10px * var(--uiScale));
-    z-index:2;
-  }
-  .row{ display:flex; flex-wrap:wrap; gap:calc(10px * var(--uiScale)); align-items:center; }
-  .pill{ display:inline-flex; align-items:center; gap:calc(8px * var(--uiScale));
-         padding:calc(6px * var(--uiScale)) calc(12px * var(--uiScale));
-         border-radius:999px; background:#fff; font-weight:700;
-         font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); }
-  .btn{ cursor:pointer; padding:calc(8px * var(--uiScale)) calc(14px * var(--uiScale));
-        border-radius:12px; border:none; font-weight:700;
-        font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); }
-  .btn:active{ transform:translateY(1px); }
-  .btn-green{ background:#4caf50; color:#fff; }
-  .btn-green:hover{ background:#45a049; }
-  .btn-blue{ background:#2196f3; color:#fff; }
-  .btn-blue:hover{ background:#1976d2; }
-  .btn-grey{ background:#888; color:#fff; }
-  .btn-grey:hover{ background:#777; }
-  .btn-donate{ background:#2d5a2d; color:#fff; }
-  .btn-donate:hover{ background:#1a4d1a; }
-
-  /* Bars: light grey track, black fill (red under 50%) */
-  .meters{ display:flex; gap:calc(10px * var(--uiScale)); flex-wrap:wrap; }
-  .meter{ width:clamp(160px, calc(28vw * var(--uiScale)), 320px);
-          height:clamp(12px, calc(2.2vh * var(--uiScale)), 20px);
-          background:#d3d3d3; border-radius:20px; overflow:hidden; }
-  .fill{ display:block; height:100%; transition:width .15s linear, background-color .15s linear; }
-
-  /* On phones: make bars take ~one third of screen vertically */
-  @media (max-width: 640px){
-    .meters{ flex-direction:column; align-items:stretch; min-height:33vh; }
-    .meter{ width:100%; height:6.5vh; min-height:44px; }
+  @keyframes pulse-glow {
+    0%, 100% { filter: drop-shadow(0 0 8px var(--accent-gold)) drop-shadow(0 0 20px rgba(212, 175, 55, 0.4)); }
+    50% { filter: drop-shadow(0 0 15px var(--accent-gold-light)) drop-shadow(0 0 30px rgba(212, 175, 55, 0.6)); }
   }
 
-  /* Grid (2×2) fills the rest */
-  .grid{
-    flex:1; display:grid;
-    grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
-    gap:clamp(8px, calc(2vmin * var(--uiScale)), 24px);
-    padding:calc(8px * var(--uiScale));
-  }
-  .zone{ position:relative; border-radius:20px; outline:4px solid rgba(255,255,255,.6); overflow:hidden; }
-  .label{ position:absolute; top:8px; left:8px;
-          padding:calc(6px * var(--uiScale)) calc(10px * var(--uiScale));
-          background:rgba(255,255,255,.9); border-radius:12px; font-weight:700;
-          font-size:calc(clamp(12px, 1.8vw, 16px) * var(--uiScale)); z-index:2; }
-  .lake{ background:radial-gradient(circle at 40% 30%, #e7f6ff, var(--water)); }
-  .field{ background:repeating-linear-gradient(45deg, rgba(255,255,255,.35), rgba(255,255,255,.35) 10px, transparent 10px, transparent 20px); }
-  .play{ background:linear-gradient(135deg, #fef3bd, #ffd6a5); }
-  .barn{ background:linear-gradient(var(--barn1), var(--barn2)); }
-  .barn .door{ position:absolute; left:50%; bottom:0; transform:translateX(-50%);
-               width:28%; height:60%; background:#4b8a16; border:6px solid #2f2614;
-               border-bottom:none; border-radius:10px 10px 0 0; }
-  .barn .stoop{ position:absolute; left:14%; right:14%; bottom:-8%; height:14%;
-                background:var(--dirt); border-radius:20px; }
-
-  /* Unicorn (absolute in world) */
-  .unicorn{
-    position:absolute; aspect-ratio:1/1; user-select:none; touch-action:none; z-index:3;
-    transform:translate(-50%,-50%);
-    width:clamp(72px, calc(12vmin * var(--uiScale)), 160px);
-  }
-  .u-emoji{ font-size:clamp(48px, calc(8vmin * var(--uiScale)), 80px); line-height:1; }
-
-  /* Phones: lock to "thumbnail" size so it doesn't overgrow */
-  @media (max-width: 640px){
-    .unicorn{ width:96px; }
-    .u-emoji{ font-size:90px; }
+  @keyframes critical-pulse {
+    0%, 100% { box-shadow: inset 0 0 10px rgba(231, 76, 60, 0.5), 0 0 10px rgba(231, 76, 60, 0.3); }
+    50% { box-shadow: inset 0 0 20px rgba(231, 76, 60, 0.8), 0 0 25px rgba(231, 76, 60, 0.6); }
   }
 
-  /* Monster chases with CSS transitions to the unicorn's position */
-  .monster{
-    position:absolute; z-index:4; line-height:1; pointer-events:none;
-    transform:translate(-50%,-50%) scale(1);
-    transition: left 2s linear, top 2s linear, transform .25s ease;
-    filter:hue-rotate(90deg) saturate(0.6) brightness(0.85); /* grey-green tint */
-    font-size:clamp(72px, calc(14vmin * var(--uiScale)), 160px);
-  }
-  .monster.chomp{ transform:translate(-50%,-50%) scale(1.2) rotate(5deg); }
-
-  /* Phones: monster = large thumbnail */
-  @media (max-width: 640px){
-    .monster{ font-size:110px; }
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
   }
 
-  /* Modal */
-  .modal{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:5; }
-  .panel{ background:#fff; padding:calc(18px * var(--uiScale)); border-radius:16px; width:min(92%,520px); text-align:center; }
-  .panel h2{ margin:0 0 12px; font-size:calc(clamp(18px, 3.2vmin, 22px) * var(--uiScale)); }
-  .panel p{ margin:0 0 16px; font-size:calc(clamp(14px, 2.6vmin, 18px) * var(--uiScale)); }
+  @keyframes water-wave {
+    0%, 100% { transform: translateX(0) scaleY(1); }
+    25% { transform: translateX(2%) scaleY(1.02); }
+    50% { transform: translateX(0) scaleY(1); }
+    75% { transform: translateX(-2%) scaleY(0.98); }
+  }
+
+  @keyframes grass-sway {
+    0%, 100% { transform: skewX(0deg); }
+    25% { transform: skewX(2deg); }
+    75% { transform: skewX(-2deg); }
+  }
+
+  @keyframes barn-glow {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1) rotate(180deg); }
+  }
+
+  @keyframes monster-breathe {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.05); }
+  }
+
+  @keyframes screen-shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+  }
+
+  @keyframes level-up-flash {
+    0% { opacity: 0; }
+    50% { opacity: 0.3; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes border-glow {
+    0%, 100% { border-color: var(--accent-gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+    50% { border-color: var(--accent-gold-light); box-shadow: 0 0 25px rgba(212, 175, 55, 0.5); }
+  }
+
+  /* Base Styles */
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-gradient-1) 50%, var(--bg-gradient-2) 100%);
+    font-family: 'Crimson Text', Georgia, serif;
+    color: var(--text-light);
+    overflow: hidden;
+  }
+
+  #app {
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  /* Main Game World */
+  .world {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1200px;
+    height: 95dvh;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border: 3px solid var(--accent-gold-dark);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.5),
+      0 0 30px rgba(212, 175, 55, 0.2),
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .world.shake {
+    animation: screen-shake 0.5s ease-in-out;
+  }
+
+  /* Ambient Particles Container */
+  .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+    overflow: hidden;
+  }
+
+  .particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: var(--accent-gold);
+    border-radius: 50%;
+    animation: sparkle 3s infinite;
+    box-shadow: 0 0 6px var(--accent-gold);
+  }
+
+  /* Top UI Panel */
+  .ui {
+    padding: calc(12px * var(--uiScale));
+    background: linear-gradient(180deg,
+      rgba(26, 26, 46, 0.98) 0%,
+      rgba(22, 33, 62, 0.95) 100%);
+    border-bottom: 2px solid var(--accent-gold-dark);
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.5),
+      inset 0 -1px 0 rgba(212, 175, 55, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: calc(12px * var(--uiScale));
+    z-index: 20;
+    position: relative;
+  }
+
+  .ui::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      var(--accent-gold) 20%,
+      var(--accent-gold-light) 50%,
+      var(--accent-gold) 80%,
+      transparent 100%);
+  }
+
+  /* Game Title */
+  .game-title {
+    font-family: 'Cinzel', serif;
+    font-size: calc(clamp(20px, 3.5vw, 32px) * var(--uiScale));
+    font-weight: 900;
+    text-align: center;
+    background: linear-gradient(180deg, var(--accent-gold-light) 0%, var(--accent-gold) 50%, var(--accent-gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 10px rgba(212, 175, 55, 0.5);
+    letter-spacing: 4px;
+    margin-bottom: calc(4px * var(--uiScale));
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(12px * var(--uiScale));
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Status Badges (Level, Time, Zone) */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(8px * var(--uiScale));
+    padding: calc(8px * var(--uiScale)) calc(16px * var(--uiScale));
+    background: linear-gradient(180deg, rgba(45, 45, 65, 0.9) 0%, rgba(30, 30, 50, 0.95) 100%);
+    border: 2px solid var(--accent-gold-dark);
+    border-radius: 8px;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: calc(clamp(12px, 1.8vw, 16px) * var(--uiScale));
+    color: var(--text-gold);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: shimmer 3s infinite;
+  }
+
+  .badge-icon {
+    font-size: calc(1.3em * var(--uiScale));
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+
+  .badge-label {
+    opacity: 0.7;
+    font-weight: 500;
+  }
+
+  .badge-value {
+    font-weight: 900;
+    color: var(--accent-gold-light);
+  }
+
+  .badge.zone-badge {
+    border-color: var(--accent-purple);
+    background: linear-gradient(180deg, rgba(108, 52, 131, 0.4) 0%, rgba(75, 35, 95, 0.5) 100%);
+  }
+
+  /* Stat Meters */
+  .meters {
+    display: flex;
+    gap: calc(10px * var(--uiScale));
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat-container {
+    display: flex;
+    align-items: center;
+    gap: calc(10px * var(--uiScale));
+    padding: calc(8px * var(--uiScale)) calc(12px * var(--uiScale));
+    background: linear-gradient(180deg, rgba(40, 40, 60, 0.8) 0%, rgba(25, 25, 45, 0.9) 100%);
+    border: 2px solid rgba(212, 175, 55, 0.4);
+    border-radius: 10px;
+    box-shadow:
+      0 4px 15px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .stat-icon {
+    font-size: calc(1.6em * var(--uiScale));
+    filter: drop-shadow(0 0 6px currentColor);
+    min-width: calc(28px * var(--uiScale));
+    text-align: center;
+  }
+
+  .stat-bar-frame {
+    position: relative;
+    width: clamp(120px, calc(20vw * var(--uiScale)), 200px);
+    height: calc(clamp(16px, 2.5vh, 24px) * var(--uiScale));
+    background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+    border: 2px solid #4a4a4a;
+    border-radius: 4px;
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.8),
+      0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+
+  .stat-bar-frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    transition: width 0.15s ease-out, background 0.3s ease;
+    position: relative;
+    border-radius: 2px;
+  }
+
+  .stat-bar-fill.hunger {
+    background: linear-gradient(180deg, #e74c3c 0%, #c0392b 50%, #922b21 100%);
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .stat-bar-fill.thirst {
+    background: linear-gradient(180deg, #5dade2 0%, #2980b9 50%, #1a5276 100%);
+    box-shadow: 0 0 10px rgba(93, 173, 226, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .stat-bar-fill.energy {
+    background: linear-gradient(180deg, #f4d03f 0%, #d4af37 50%, #b8860b 100%);
+    box-shadow: 0 0 10px rgba(244, 208, 63, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .stat-bar-fill.fun {
+    background: linear-gradient(180deg, #9b59b6 0%, #8e44ad 50%, #6c3483 100%);
+    box-shadow: 0 0 10px rgba(155, 89, 182, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .stat-bar-fill.critical {
+    animation: critical-pulse 0.5s infinite;
+  }
+
+  .stat-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  .stat-value {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Cinzel', serif;
+    font-size: calc(clamp(10px, 1.2vw, 12px) * var(--uiScale));
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    z-index: 3;
+  }
+
+  /* Buttons */
+  .btn {
+    cursor: pointer;
+    padding: calc(10px * var(--uiScale)) calc(20px * var(--uiScale));
+    border-radius: 8px;
+    border: 2px solid;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: calc(clamp(12px, 1.6vw, 14px) * var(--uiScale));
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .btn:active {
+    transform: translateY(2px);
+  }
+
+  .btn-primary {
+    background: linear-gradient(180deg, var(--accent-gold-light) 0%, var(--accent-gold) 50%, var(--accent-gold-dark) 100%);
+    border-color: var(--accent-gold-dark);
+    color: #1a1a1a;
+    box-shadow:
+      0 4px 15px rgba(212, 175, 55, 0.4),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(180deg, #ffe066 0%, var(--accent-gold-light) 50%, var(--accent-gold) 100%);
+    box-shadow:
+      0 4px 25px rgba(212, 175, 55, 0.6),
+      0 0 30px rgba(212, 175, 55, 0.3),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-secondary {
+    background: linear-gradient(180deg, #5a5a7a 0%, #3a3a5a 50%, #2a2a4a 100%);
+    border-color: #6a6a8a;
+    color: var(--text-light);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.4),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-secondary:hover {
+    background: linear-gradient(180deg, #6a6a8a 0%, #4a4a6a 50%, #3a3a5a 100%);
+    border-color: #8a8aaa;
+    box-shadow:
+      0 4px 20px rgba(100, 100, 150, 0.3),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-success {
+    background: linear-gradient(180deg, #2ecc71 0%, #27ae60 50%, #1e8449 100%);
+    border-color: #1e8449;
+    color: white;
+    box-shadow:
+      0 4px 15px rgba(46, 204, 113, 0.4),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(180deg, #58d68d 0%, #2ecc71 50%, #27ae60 100%);
+    box-shadow:
+      0 4px 25px rgba(46, 204, 113, 0.6),
+      0 0 30px rgba(46, 204, 113, 0.3),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-danger {
+    background: linear-gradient(180deg, #e74c3c 0%, #c0392b 50%, #922b21 100%);
+    border-color: #922b21;
+    color: white;
+    box-shadow:
+      0 4px 15px rgba(231, 76, 60, 0.4),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-danger:hover {
+    background: linear-gradient(180deg, #ec7063 0%, #e74c3c 50%, #c0392b 100%);
+    box-shadow:
+      0 4px 25px rgba(231, 76, 60, 0.6),
+      0 0 30px rgba(231, 76, 60, 0.3),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-donate {
+    background: linear-gradient(180deg, var(--accent-purple-light) 0%, var(--accent-purple) 50%, #5b2c6f 100%);
+    border-color: #5b2c6f;
+    color: white;
+    box-shadow:
+      0 4px 15px rgba(155, 89, 182, 0.4),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-donate:hover {
+    background: linear-gradient(180deg, #bb8fce 0%, var(--accent-purple-light) 50%, var(--accent-purple) 100%);
+    box-shadow:
+      0 4px 25px rgba(155, 89, 182, 0.6),
+      0 0 30px rgba(155, 89, 182, 0.3),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  /* Game Grid */
+  .grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: clamp(6px, calc(1.5vmin * var(--uiScale)), 16px);
+    padding: calc(8px * var(--uiScale));
+    background: radial-gradient(ellipse at center, rgba(30, 40, 60, 0.5) 0%, transparent 70%);
+  }
+
+  .zone {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 3px solid rgba(212, 175, 55, 0.3);
+    box-shadow:
+      inset 0 0 30px rgba(0, 0, 0, 0.5),
+      0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .zone:hover {
+    border-color: rgba(212, 175, 55, 0.6);
+    box-shadow:
+      inset 0 0 30px rgba(0, 0, 0, 0.5),
+      0 4px 30px rgba(212, 175, 55, 0.2);
+  }
+
+  .zone-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .zone-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .label {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: calc(8px * var(--uiScale)) calc(14px * var(--uiScale));
+    background: linear-gradient(180deg, rgba(30, 30, 50, 0.95) 0%, rgba(20, 20, 40, 0.98) 100%);
+    border: 2px solid var(--accent-gold-dark);
+    border-radius: 8px;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: calc(clamp(11px, 1.5vw, 14px) * var(--uiScale));
+    color: var(--text-gold);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Lake Zone */
+  .lake .zone-bg {
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(133, 193, 233, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(93, 173, 226, 0.3) 0%, transparent 40%),
+      linear-gradient(180deg, var(--lake-surface) 0%, var(--lake-deep) 100%);
+  }
+
+  .lake .zone-overlay {
+    background:
+      repeating-linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.03) 1%,
+        transparent 2%);
+    animation: water-wave 4s ease-in-out infinite;
+  }
+
+  .lake::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30%;
+    background: linear-gradient(180deg, transparent 0%, rgba(26, 82, 118, 0.6) 100%);
+    pointer-events: none;
+  }
+
+  /* Field Zone */
+  .field .zone-bg {
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(88, 214, 141, 0.3) 0%, transparent 40%),
+      radial-gradient(ellipse at 80% 70%, rgba(249, 231, 159, 0.2) 0%, transparent 40%),
+      linear-gradient(180deg, var(--field-light) 0%, var(--field-dark) 100%);
+  }
+
+  .field .zone-overlay {
+    background:
+      repeating-linear-gradient(0deg,
+        transparent 0%,
+        transparent 10%,
+        rgba(0, 0, 0, 0.05) 10%,
+        rgba(0, 0, 0, 0.05) 11%);
+    animation: grass-sway 3s ease-in-out infinite;
+  }
+
+  .field::before {
+    content: '🌾';
+    position: absolute;
+    bottom: 10%;
+    right: 10%;
+    font-size: 2em;
+    opacity: 0.6;
+    z-index: 2;
+  }
+
+  /* Barn Zone */
+  .barn .zone-bg {
+    background:
+      radial-gradient(ellipse at 50% 80%, rgba(220, 118, 51, 0.4) 0%, transparent 50%),
+      linear-gradient(180deg, var(--barn-light) 0%, var(--barn-wood) 50%, var(--barn-dark) 100%);
+  }
+
+  .barn .barn-structure {
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 70%;
+    z-index: 2;
+  }
+
+  .barn .roof {
+    position: absolute;
+    top: 0;
+    left: -10%;
+    right: -10%;
+    height: 35%;
+    background: linear-gradient(180deg, #5d4e37 0%, #3e342a 100%);
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  .barn .walls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70%;
+    background: linear-gradient(180deg, #a04000 0%, #6e2c00 100%);
+    border-radius: 4px 4px 0 0;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .barn .door {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 35%;
+    height: 55%;
+    background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
+    border: 4px solid #1a472a;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+  }
+
+  .barn .window {
+    position: absolute;
+    top: 50%;
+    width: 25%;
+    height: 30%;
+    background: rgba(255, 200, 100, 0.8);
+    border: 3px solid #1a472a;
+    border-radius: 4px;
+    box-shadow: 0 0 20px rgba(255, 200, 100, 0.6);
+    animation: barn-glow 2s ease-in-out infinite;
+  }
+
+  .barn .window.left { left: 8%; }
+  .barn .window.right { right: 8%; }
+
+  /* Play Zone */
+  .play .zone-bg {
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(253, 235, 208, 0.5) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 70%, rgba(248, 196, 113, 0.4) 0%, transparent 50%),
+      linear-gradient(135deg, var(--play-glow) 0%, var(--play-warm) 50%, #e67e22 100%);
+  }
+
+  .play .zone-overlay {
+    background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.1) 100%);
+  }
+
+  .play .decorations {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .play .balloon {
+    position: absolute;
+    font-size: 1.8em;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .play .balloon:nth-child(1) { top: 20%; left: 15%; animation-delay: 0s; }
+  .play .balloon:nth-child(2) { top: 30%; right: 20%; animation-delay: 0.5s; }
+  .play .balloon:nth-child(3) { bottom: 25%; left: 25%; animation-delay: 1s; }
+
+  /* Unicorn */
+  .unicorn {
+    position: absolute;
+    user-select: none;
+    touch-action: none;
+    z-index: 15;
+    cursor: grab;
+    animation: float 2s ease-in-out infinite, pulse-glow 2s ease-in-out infinite;
+    transition: filter 0.2s ease;
+  }
+
+  .unicorn:active {
+    cursor: grabbing;
+    animation: pulse-glow 0.5s ease-in-out infinite;
+  }
+
+  .unicorn:hover {
+    filter: drop-shadow(0 0 20px var(--accent-gold-light)) drop-shadow(0 0 40px rgba(212, 175, 55, 0.5));
+  }
+
+  .u-emoji {
+    font-size: clamp(56px, calc(10vmin * var(--uiScale)), 100px);
+    line-height: 1;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  }
+
+  .unicorn-aura {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @media (max-width: 640px) {
+    .u-emoji { font-size: 80px; }
+  }
+
+  /* Monster */
+  .monster {
+    position: absolute;
+    z-index: 16;
+    pointer-events: none;
+    transition: left 2s ease-in-out, top 2s ease-in-out, transform 0.3s ease;
+    animation: monster-breathe 1s ease-in-out infinite;
+  }
+
+  .monster-emoji {
+    font-size: clamp(70px, calc(12vmin * var(--uiScale)), 120px);
+    line-height: 1;
+    filter:
+      drop-shadow(0 0 20px rgba(231, 76, 60, 0.8))
+      drop-shadow(0 0 40px rgba(192, 57, 43, 0.5))
+      drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  }
+
+  .monster.chomp {
+    transform: translate(-50%, -50%) scale(1.3) rotate(10deg);
+  }
+
+  .monster.chomp .monster-emoji {
+    filter:
+      drop-shadow(0 0 30px rgba(231, 76, 60, 1))
+      drop-shadow(0 0 60px rgba(192, 57, 43, 0.8))
+      drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  }
+
+  @media (max-width: 640px) {
+    .monster-emoji { font-size: 100px; }
+  }
+
+  /* Modals */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.9) 100%);
+    z-index: 100;
+    animation: fade-in-up 0.3s ease-out;
+  }
+
+  .modal-panel {
+    background: linear-gradient(180deg, rgba(35, 35, 55, 0.98) 0%, rgba(25, 25, 45, 0.99) 100%);
+    padding: calc(28px * var(--uiScale));
+    border-radius: 16px;
+    width: min(90%, 480px);
+    text-align: center;
+    border: 3px solid var(--accent-gold);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.5),
+      0 0 60px rgba(212, 175, 55, 0.3),
+      0 20px 60px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: fade-in-up 0.4s ease-out, border-glow 2s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .modal-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      var(--accent-gold) 20%,
+      var(--accent-gold-light) 50%,
+      var(--accent-gold) 80%,
+      transparent 100%);
+  }
+
+  .modal-panel::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      var(--accent-gold-dark) 20%,
+      var(--accent-gold) 50%,
+      var(--accent-gold-dark) 80%,
+      transparent 100%);
+  }
+
+  .modal-icon {
+    font-size: calc(3.5em * var(--uiScale));
+    margin-bottom: calc(12px * var(--uiScale));
+    filter: drop-shadow(0 0 15px currentColor);
+  }
+
+  .modal-title {
+    font-family: 'Cinzel', serif;
+    font-size: calc(clamp(22px, 4vw, 32px) * var(--uiScale));
+    font-weight: 900;
+    margin: 0 0 calc(12px * var(--uiScale));
+    background: linear-gradient(180deg, var(--accent-gold-light) 0%, var(--accent-gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+
+  .modal-subtitle {
+    font-size: calc(clamp(14px, 2.5vw, 18px) * var(--uiScale));
+    margin: 0 0 calc(20px * var(--uiScale));
+    color: var(--text-light);
+    opacity: 0.9;
+    line-height: 1.5;
+  }
+
+  .modal-stats {
+    display: flex;
+    justify-content: center;
+    gap: calc(20px * var(--uiScale));
+    margin-bottom: calc(24px * var(--uiScale));
+    flex-wrap: wrap;
+  }
+
+  .modal-stat {
+    background: rgba(0, 0, 0, 0.3);
+    padding: calc(12px * var(--uiScale)) calc(20px * var(--uiScale));
+    border-radius: 8px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+
+  .modal-stat-label {
+    font-size: calc(0.8em * var(--uiScale));
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    font-family: 'Cinzel', serif;
+  }
+
+  .modal-stat-value {
+    font-family: 'Cinzel', serif;
+    font-size: calc(1.5em * var(--uiScale));
+    font-weight: 900;
+    color: var(--text-gold);
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: calc(12px * var(--uiScale));
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Level Up Flash Effect */
+  .level-flash {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, var(--accent-gold-light) 0%, transparent 70%);
+    animation: level-up-flash 0.8s ease-out forwards;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  /* Mobile Adjustments */
+  @media (max-width: 640px) {
+    .ui {
+      padding: 10px;
+      gap: 10px;
+    }
+
+    .game-title {
+      font-size: 24px;
+      letter-spacing: 2px;
+    }
+
+    .row {
+      gap: 8px;
+    }
+
+    .badge, .stat-container {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .stat-bar-frame {
+      width: 100px;
+      height: 16px;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      font-size: 11px;
+    }
+
+    .meters {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .stat-container {
+      justify-content: space-between;
+    }
+
+    .stat-bar-frame {
+      flex: 1;
+      max-width: none;
+    }
+
+    .label {
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -136,216 +1003,396 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="text/babel">
-const {useState,useRef,useEffect} = React;
-const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+const {useState, useRef, useEffect} = React;
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
 /* Base drain rates */
-const BASE_DRAIN    = { hunger: 1.0, thirst: 1.0, energy: 1.0, fun: 1.0 };
-const BASE_RECHARGE = { lake: {thirst: 6}, field: {hunger: 6}, barn: {energy: 8}, play: {fun: 6} };
+const BASE_DRAIN = {hunger: 1.0, thirst: 1.0, energy: 1.0, fun: 1.0};
+const BASE_RECHARGE = {lake: {thirst: 6}, field: {hunger: 6}, barn: {energy: 8}, play: {fun: 6}};
 
 /* Drain increase rates per level */
-const DRAIN_GROWTH    = 0.80;  // drain +80% per level
-const RECHARGE_GROWTH = 0.30;  // recharge +30% per level
+const DRAIN_GROWTH = 0.80;
+const RECHARGE_GROWTH = 0.30;
 
-function App(){
-  const initial={
-    x:15, y:25,
-    needs:{hunger:100,thirst:100,energy:100,fun:100},
-    level:1,
-    levelTime:30,
-    status:null,          // 'gameover' | 'nextlevel' | null
-    eaten:false,          // monster sequence active
-    monster:{ x:-20, y:50, chomp:false } // in %
+/* Stat configuration with icons and colors */
+const STATS_CONFIG = {
+  hunger: {icon: '🍎', label: 'Hunger', color: 'hunger'},
+  thirst: {icon: '💧', label: 'Thirst', color: 'thirst'},
+  energy: {icon: '⚡', label: 'Energy', color: 'energy'},
+  fun: {icon: '🎈', label: 'Joy', color: 'fun'}
+};
+
+/* Zone display names */
+const ZONE_NAMES = {
+  lake: {name: 'Crystal Lake', icon: '💧'},
+  field: {name: 'Golden Fields', icon: '🌾'},
+  barn: {name: 'Cozy Barn', icon: '🏠'},
+  play: {name: 'Festival Grounds', icon: '🎪'}
+};
+
+function Particles() {
+  const particles = Array.from({length: 20}, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 5}s`,
+    duration: `${2 + Math.random() * 3}s`
+  }));
+
+  return (
+    <div className="particles">
+      {particles.map(p => (
+        <div
+          key={p.id}
+          className="particle"
+          style={{
+            left: p.left,
+            top: p.top,
+            animationDelay: p.delay,
+            animationDuration: p.duration
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StatBar({type, value}) {
+  const config = STATS_CONFIG[type];
+  const isCritical = value < 30;
+
+  return (
+    <div className="stat-container">
+      <span className="stat-icon">{config.icon}</span>
+      <div className="stat-bar-frame">
+        <div
+          className={`stat-bar-fill ${config.color} ${isCritical ? 'critical' : ''}`}
+          style={{width: `${value}%`}}
+        />
+        <span className="stat-value">{Math.round(value)}%</span>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const initial = {
+    x: 25,
+    y: 55,
+    needs: {hunger: 100, thirst: 100, energy: 100, fun: 100},
+    level: 1,
+    levelTime: 30,
+    status: null,
+    eaten: false,
+    monster: {x: -20, y: 50, chomp: false}
   };
 
-  const [s,setS]=useState(initial);
-  const [dragging,setDragging]=useState(false);
-  const worldRef=useRef(null);
+  const [s, setS] = useState(initial);
+  const [dragging, setDragging] = useState(false);
+  const [showLevelFlash, setShowLevelFlash] = useState(false);
+  const [shake, setShake] = useState(false);
+  const worldRef = useRef(null);
 
-  const drainMult    = 1 + (s.level-1)*DRAIN_GROWTH;
-  const rechargeMult = 1 + (s.level-1)*RECHARGE_GROWTH;
+  const drainMult = 1 + (s.level - 1) * DRAIN_GROWTH;
+  const rechargeMult = 1 + (s.level - 1) * RECHARGE_GROWTH;
 
   /* Main loop @10Hz */
-  useEffect(()=>{
-    if(s.status) return;
+  useEffect(() => {
+    if (s.status) return;
     const dt = 0.1;
-    const id = setInterval(()=>{
-      setS(prev=>{
-        if(prev.status) return prev;
+    const id = setInterval(() => {
+      setS(prev => {
+        if (prev.status) return prev;
 
         const current = hitZoneAtPercent(prev.x, prev.y);
-
         const needs = {...prev.needs};
+
         // drain
-        needs.hunger = clamp(needs.hunger - BASE_DRAIN.hunger*drainMult*dt, 0, 100);
-        needs.thirst = clamp(needs.thirst - BASE_DRAIN.thirst*drainMult*dt, 0, 100);
-        needs.energy = clamp(needs.energy - BASE_DRAIN.energy*drainMult*dt, 0, 100);
-        needs.fun    = clamp(needs.fun    - BASE_DRAIN.fun   *drainMult*dt, 0, 100);
+        needs.hunger = clamp(needs.hunger - BASE_DRAIN.hunger * drainMult * dt, 0, 100);
+        needs.thirst = clamp(needs.thirst - BASE_DRAIN.thirst * drainMult * dt, 0, 100);
+        needs.energy = clamp(needs.energy - BASE_DRAIN.energy * drainMult * dt, 0, 100);
+        needs.fun = clamp(needs.fun - BASE_DRAIN.fun * drainMult * dt, 0, 100);
 
-        // recharge (matching zone only)
-        if(current==='lake')  needs.thirst = clamp(needs.thirst + BASE_RECHARGE.lake.thirst  *rechargeMult*dt, 0, 100);
-        if(current==='field') needs.hunger = clamp(needs.hunger + BASE_RECHARGE.field.hunger*rechargeMult*dt, 0, 100);
-        if(current==='barn')  needs.energy = clamp(needs.energy + BASE_RECHARGE.barn.energy *rechargeMult*dt, 0, 100);
-        if(current==='play')  needs.fun    = clamp(needs.fun    + BASE_RECHARGE.play.fun    *rechargeMult*dt, 0, 100);
+        // recharge
+        if (current === 'lake') needs.thirst = clamp(needs.thirst + BASE_RECHARGE.lake.thirst * rechargeMult * dt, 0, 100);
+        if (current === 'field') needs.hunger = clamp(needs.hunger + BASE_RECHARGE.field.hunger * rechargeMult * dt, 0, 100);
+        if (current === 'barn') needs.energy = clamp(needs.energy + BASE_RECHARGE.barn.energy * rechargeMult * dt, 0, 100);
+        if (current === 'play') needs.fun = clamp(needs.fun + BASE_RECHARGE.play.fun * rechargeMult * dt, 0, 100);
 
-        // trigger monster sequence once
-        if(Object.values(needs).some(v=>v<=0) && !prev.eaten){
-          const startY = prev.y; // monster enters at unicorn's Y
-          return {...prev, needs, eaten:true, monster:{ x:-20, y:startY, chomp:false }};
+        // trigger monster
+        if (Object.values(needs).some(v => v <= 0) && !prev.eaten) {
+          return {...prev, needs, eaten: true, monster: {x: -20, y: prev.y, chomp: false}};
         }
 
         // countdown
         const time = prev.levelTime - dt;
-        if(time <= 0){
-          return {...prev, needs, levelTime:0, status:'nextlevel'};
+        if (time <= 0) {
+          return {...prev, needs, levelTime: 0, status: 'nextlevel'};
         }
-        return {...prev, needs, levelTime:time};
+        return {...prev, needs, levelTime: time};
       });
-    }, dt*1000);
-    return ()=>clearInterval(id);
-  },[s.status, s.level, s.eaten]);
+    }, dt * 1000);
+    return () => clearInterval(id);
+  }, [s.status, s.level, s.eaten]);
 
-  /* Monster chase + collision sequence */
-  useEffect(()=>{
-    if(!s.eaten) return;
+  /* Monster chase sequence */
+  useEffect(() => {
+    if (!s.eaten) return;
 
-    // Move monster to unicorn's current % position (2s)
-    const chaseTimer = setTimeout(()=>{
-      setS(prev=>({...prev, monster:{ ...prev.monster, x: prev.x, y: prev.y }}));
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
+
+    const chaseTimer = setTimeout(() => {
+      setS(prev => ({...prev, monster: {...prev.monster, x: prev.x, y: prev.y}}));
     }, 100);
 
-    // Chomp near arrival (~2.1s), quick scale/tilt
-    const chompTimer = setTimeout(()=>{
-      setS(prev=>({...prev, monster:{...prev.monster, chomp:true}}));
+    const chompTimer = setTimeout(() => {
+      setS(prev => ({...prev, monster: {...prev.monster, chomp: true}}));
     }, 2100);
 
-    // After 4s total, show game over modal
-    const overTimer = setTimeout(()=>{
-      setS(prev=>({...prev, status:'gameover'}));
+    const overTimer = setTimeout(() => {
+      setS(prev => ({...prev, status: 'gameover'}));
     }, 4000);
 
-    return ()=>{ clearTimeout(chaseTimer); clearTimeout(chompTimer); clearTimeout(overTimer); };
-  },[s.eaten]);
+    return () => {
+      clearTimeout(chaseTimer);
+      clearTimeout(chompTimer);
+      clearTimeout(overTimer);
+    };
+  }, [s.eaten]);
 
-  /* Pointer to % helpers */
-  function posToPercent(e){
-    const r=worldRef.current.getBoundingClientRect();
-    const xClient = (e.touches?.[0]) ? e.touches[0].clientX : e.clientX;
-    const yClient = (e.touches?.[0]) ? e.touches[0].clientY : e.clientY;
+  /* Pointer helpers */
+  function posToPercent(e) {
+    const r = worldRef.current.getBoundingClientRect();
+    const xClient = e.touches?.[0] ? e.touches[0].clientX : e.clientX;
+    const yClient = e.touches?.[0] ? e.touches[0].clientY : e.clientY;
     const cx = xClient - r.left;
     const cy = yClient - r.top;
-    return {x:clamp((cx/r.width)*100,0,100), y:clamp((cy/r.height)*100,0,100)};
+    return {x: clamp((cx / r.width) * 100, 0, 100), y: clamp((cy / r.height) * 100, 0, 100)};
   }
-  function onStart(e){ e.preventDefault(); if(s.eaten||s.status) return; setDragging(true); const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
-  function onMove(e){ if(!dragging || s.eaten || s.status) return; e.preventDefault(); const {x,y}=posToPercent(e); setS(p=>({...p,x,y})); }
-  function onEnd(){ setDragging(false); }
 
-  /* Zone detection in world % coords */
-  function hitZoneAtPercent(xPct, yPct){
-    if(!worldRef.current) return null;
-    const rWorld=worldRef.current.getBoundingClientRect();
-    const px=rWorld.left + (xPct/100)*rWorld.width;
-    const py=rWorld.top  + (yPct/100)*rWorld.height;
-    const els=[...worldRef.current.querySelectorAll('.grid > .zone')];
-    for(const el of els){
-      const rr=el.getBoundingClientRect();
-      if(px>rr.left && px<rr.right && py>rr.top && py<rr.bottom){
-        if(el.classList.contains('lake')) return 'lake';
-        if(el.classList.contains('field')) return 'field';
-        if(el.classList.contains('play')) return 'play';
-        if(el.classList.contains('barn')) return 'barn';
+  function onStart(e) {
+    e.preventDefault();
+    if (s.eaten || s.status) return;
+    setDragging(true);
+    const {x, y} = posToPercent(e);
+    setS(p => ({...p, x, y}));
+  }
+
+  function onMove(e) {
+    if (!dragging || s.eaten || s.status) return;
+    e.preventDefault();
+    const {x, y} = posToPercent(e);
+    setS(p => ({...p, x, y}));
+  }
+
+  function onEnd() {
+    setDragging(false);
+  }
+
+  /* Zone detection */
+  function hitZoneAtPercent(xPct, yPct) {
+    if (!worldRef.current) return null;
+    const rWorld = worldRef.current.getBoundingClientRect();
+    const px = rWorld.left + (xPct / 100) * rWorld.width;
+    const py = rWorld.top + (yPct / 100) * rWorld.height;
+    const els = [...worldRef.current.querySelectorAll('.grid > .zone')];
+    for (const el of els) {
+      const rr = el.getBoundingClientRect();
+      if (px > rr.left && px < rr.right && py > rr.top && py < rr.bottom) {
+        if (el.classList.contains('lake')) return 'lake';
+        if (el.classList.contains('field')) return 'field';
+        if (el.classList.contains('play')) return 'play';
+        if (el.classList.contains('barn')) return 'barn';
       }
     }
     return null;
   }
 
-  function restartGame(){ setS({...initial}); }
-  function startNextLevel(){
-    setS(prev=>({
+  function restartGame() {
+    setS({...initial});
+    setShake(false);
+  }
+
+  function startNextLevel() {
+    setShowLevelFlash(true);
+    setTimeout(() => setShowLevelFlash(false), 800);
+    setS(prev => ({
       ...prev,
       level: prev.level + 1,
-      needs:{hunger:100,thirst:100,energy:100,fun:100},
-      levelTime:30,
-      status:null,
-      eaten:false,
-      monster:{ x:-20, y:50, chomp:false }
+      needs: {hunger: 100, thirst: 100, energy: 100, fun: 100},
+      levelTime: 30,
+      status: null,
+      eaten: false,
+      monster: {x: -20, y: 50, chomp: false}
     }));
   }
 
   const currentZone = hitZoneAtPercent(s.x, s.y);
 
   return (
-    <div className="world" ref={worldRef}
-         onMouseMove={onMove} onMouseUp={onEnd}
-         onTouchMove={onMove} onTouchEnd={onEnd}>
-      {/* UI */}
+    <div
+      className={`world ${shake ? 'shake' : ''}`}
+      ref={worldRef}
+      onMouseMove={onMove}
+      onMouseUp={onEnd}
+      onTouchMove={onMove}
+      onTouchEnd={onEnd}
+    >
+      <Particles />
+      {showLevelFlash && <div className="level-flash" />}
+
+      {/* UI Header */}
       <div className="ui">
+        <div className="game-title">✦ UNICORN RANCH ✦</div>
+
         <div className="row">
-          <span className="pill">Level: {s.level}</span>
-          <span className="pill">Time: {Math.ceil(s.levelTime)}s</span>
-          {currentZone && <span className="pill">
-            Here: {currentZone==='lake'?'Lake 💧':currentZone==='field'?'Field 🍎':currentZone==='barn'?'Barn 💤':'Play 🎈'}
-          </span>}
-          <button className="btn btn-grey" onClick={restartGame}>Restart Game</button>
-          <button className="btn btn-donate" onClick={()=>window.open('https://donate.stripe.com/00wfZhbnj5gAepS5CN33W00', '_blank')}>Donate Now!</button> {/* Stripe donation button */} 
-        </div>   
+          <div className="badge">
+            <span className="badge-icon">🏆</span>
+            <span className="badge-label">Level</span>
+            <span className="badge-value">{s.level}</span>
+          </div>
+
+          <div className="badge">
+            <span className="badge-icon">⏱️</span>
+            <span className="badge-label">Time</span>
+            <span className="badge-value">{Math.ceil(s.levelTime)}s</span>
+          </div>
+
+          {currentZone && (
+            <div className="badge zone-badge">
+              <span className="badge-icon">{ZONE_NAMES[currentZone].icon}</span>
+              <span className="badge-value">{ZONE_NAMES[currentZone].name}</span>
+            </div>
+          )}
+
+          <button className="btn btn-secondary" onClick={restartGame}>
+            ↺ Restart
+          </button>
+
+          <button
+            className="btn btn-donate"
+            onClick={() => window.open('https://donate.stripe.com/00wfZhbnj5gAepS5CN33W00', '_blank')}
+          >
+            ♥ Support
+          </button>
+        </div>
 
         <div className="row meters">
-          {Object.entries({hunger:"🍎",thirst:"💧",energy:"💤",fun:"🎈"}).map(([k,em])=>{
-            const v=s.needs[k];
-            const color = v<50 ? 'red' : 'black';
-            return (
-              <span className="pill" key={k}>
-                <span aria-hidden="true" style={{fontSize:"1.25em"}}>{em}</span>
-                <span className="meter">
-                  <span className="fill" style={{width:`${v}%`, backgroundColor: color}}></span>
-                </span>
-              </span>
-            );
-          })}
+          {Object.entries(STATS_CONFIG).map(([key]) => (
+            <StatBar key={key} type={key} value={s.needs[key]} />
+          ))}
         </div>
       </div>
 
-      {/* 2×2 Grid */}
+      {/* Game Grid */}
       <div className="grid">
-        <div className="zone lake"><div className="label">Lake 💧</div></div>
-        <div className="zone barn"><div className="label">Barn 💤</div><div className="door"></div><div className="stoop"></div></div>
-        <div className="zone field"><div className="label">Field 🍎</div></div>
-        <div className="zone play"><div className="label">Play 🎈</div></div>
+        <div className="zone lake">
+          <div className="zone-bg" />
+          <div className="zone-overlay" />
+          <div className="label">{ZONE_NAMES.lake.icon} {ZONE_NAMES.lake.name}</div>
+        </div>
+
+        <div className="zone barn">
+          <div className="zone-bg" />
+          <div className="barn-structure">
+            <div className="roof" />
+            <div className="walls">
+              <div className="window left" />
+              <div className="window right" />
+              <div className="door" />
+            </div>
+          </div>
+          <div className="label">{ZONE_NAMES.barn.icon} {ZONE_NAMES.barn.name}</div>
+        </div>
+
+        <div className="zone field">
+          <div className="zone-bg" />
+          <div className="zone-overlay" />
+          <div className="label">{ZONE_NAMES.field.icon} {ZONE_NAMES.field.name}</div>
+        </div>
+
+        <div className="zone play">
+          <div className="zone-bg" />
+          <div className="zone-overlay" />
+          <div className="decorations">
+            <span className="balloon">🎈</span>
+            <span className="balloon">🎉</span>
+            <span className="balloon">🎊</span>
+          </div>
+          <div className="label">{ZONE_NAMES.play.icon} {ZONE_NAMES.play.name}</div>
+        </div>
       </div>
 
-      {/* Unicorn (hidden once monster sequence triggers) */}
+      {/* Unicorn */}
       {!s.eaten && (
-        <div className="unicorn" style={{left:`${s.x}%`, top:`${s.y}%`}}
-             onMouseDown={onStart} onTouchStart={onStart}>
+        <div
+          className="unicorn"
+          style={{left: `${s.x}%`, top: `${s.y}%`}}
+          onMouseDown={onStart}
+          onTouchStart={onStart}
+        >
+          <div className="unicorn-aura" />
           <div className="u-emoji">🦄</div>
         </div>
       )}
 
-      {/* Monster goes to the unicorn and chomps */}
+      {/* Monster */}
       {s.eaten && (
-        <div className={`monster ${s.monster.chomp ? 'chomp' : ''}`}
-             style={{ left:`${s.monster.x}%`, top:`${s.monster.y}%` }}>
-          👹
+        <div
+          className={`monster ${s.monster.chomp ? 'chomp' : ''}`}
+          style={{left: `${s.monster.x}%`, top: `${s.monster.y}%`}}
+        >
+          <div className="monster-emoji">👹</div>
         </div>
       )}
 
-      {/* Modals */}
-      {s.status==='gameover' && (
-        <div className="modal">
-          <div className="panel">
-            <h2>Game over! Try again!</h2>
-            <p>You reached level {s.level}.</p>
-            <button className="btn btn-green" onClick={restartGame}>Restart</button>
+      {/* Game Over Modal */}
+      {s.status === 'gameover' && (
+        <div className="modal-overlay">
+          <div className="modal-panel">
+            <div className="modal-icon">💀</div>
+            <h2 className="modal-title">Game Over</h2>
+            <p className="modal-subtitle">
+              The shadow consumed your unicorn...<br />
+              But legends never truly die.
+            </p>
+            <div className="modal-stats">
+              <div className="modal-stat">
+                <div className="modal-stat-label">Level Reached</div>
+                <div className="modal-stat-value">{s.level}</div>
+              </div>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-primary" onClick={restartGame}>
+                ⚔ Rise Again
+              </button>
+            </div>
           </div>
         </div>
       )}
-      {s.status==='nextlevel' && (
-        <div className="modal">
-          <div className="panel">
-            <h2>Congrats! You're going to the next level</h2>
-            <p>Bars will drain and recharge faster every level!</p>
-            <button className="btn btn-blue" onClick={startNextLevel}>Start Level {s.level+1}</button>
+
+      {/* Level Complete Modal */}
+      {s.status === 'nextlevel' && (
+        <div className="modal-overlay">
+          <div className="modal-panel">
+            <div className="modal-icon">🌟</div>
+            <h2 className="modal-title">Victory!</h2>
+            <p className="modal-subtitle">
+              Your unicorn grows stronger!<br />
+              The challenges ahead will be greater...
+            </p>
+            <div className="modal-stats">
+              <div className="modal-stat">
+                <div className="modal-stat-label">Next Level</div>
+                <div className="modal-stat-value">{s.level + 1}</div>
+              </div>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-success" onClick={startNextLevel}>
+                ✦ Continue Quest
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -353,7 +1400,7 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
 </script>
 </body>
 </html>
