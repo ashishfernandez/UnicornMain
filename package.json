@@ -1,0 +1,21 @@
+{
+  "name": "unicorn-ranch",
+  "version": "1.0.0",
+  "description": "An interactive browser-based game where players manage a unicorn's needs",
+  "main": "index.html",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "game",
+    "unicorn",
+    "browser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
