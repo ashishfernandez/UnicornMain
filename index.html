@@ -1002,9 +1002,14 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
-<script type="text/babel">
-/** @jsx React.createElement */
-/** @jsxRuntime classic */
+<script>
+  Babel.registerPreset("react-classic", {
+    presets: [
+      [Babel.availablePresets["react"], { runtime: "classic" }]
+    ]
+  });
+</script>
+<script type="text/babel" data-presets="react-classic">
 const {useState, useRef, useEffect} = React;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
